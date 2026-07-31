@@ -14,6 +14,7 @@ from app.audio.schemas import (
     AudioDownloadData,
     AudioMetadataRead,
     AudioSegmentsRead,
+    AudioTechnicalRead,
 )
 from app.audio.service import AudioQueryService
 from app.shared.response.schemas import SuccessResponse
@@ -84,3 +85,16 @@ async def get_audio_segments(
 ) -> SuccessResponse[AudioSegmentsRead]:
     data = await service.get_segments(audio_id)
     return SuccessResponse(message="Audio segments retrieved", data=data)
+
+
+@router.get(
+    "/audio/{audio_id}/technical",
+    response_model=SuccessResponse[AudioTechnicalRead],
+    summary="Get technical intelligence results for an audio asset",
+)
+async def get_audio_technical(
+    audio_id: UUID,
+    service: AudioQueryService = Depends(get_audio_query_service),
+) -> SuccessResponse[AudioTechnicalRead]:
+    data = await service.get_technical(audio_id)
+    return SuccessResponse(message="Audio technical results retrieved", data=data)

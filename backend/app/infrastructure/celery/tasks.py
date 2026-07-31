@@ -282,6 +282,32 @@ async def _process_audio(
             "worker_id": worker_id,
         }
 
+    # Technical intelligence stage (quality / overlap / long silence).
+    from app.ai.technical.exceptions import (
+        TechnicalAnalysisException,
+        TechnicalArtifactMissingException,
+    )
+    from app.ai.technical.factory import build_technical_service
+
+    try:
+        async def technical(session):  # type: ignore[no-untyped-def]
+            service = build_technical_service(session)
+            return await service.analyze_audio(audio_id)
+
+        await with_session(technical)
+    except TechnicalArtifactMissingException as exc:
+        # Transient: analysis artifacts may not be readable yet; Celery retries.
+        raise TimeoutError(f"technical artifacts unavailable: {exc}") from None
+    except TechnicalAnalysisException as exc:
+        await with_session(_mark_audio_failed(audio_id, job_id, worker_id, str(exc)))
+        return {
+            "audio_id": str(audio_id),
+            "status": "FAILED",
+            "error": str(exc),
+            "code": getattr(exc, "code", "TECHNICAL_ANALYSIS_ERROR"),
+            "worker_id": worker_id,
+        }
+
     async def finish(session):  # type: ignore[no-untyped-def]
         service = build_job_service(session)
         if await service.is_cancelled(job_id):

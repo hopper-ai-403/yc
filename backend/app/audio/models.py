@@ -132,6 +132,17 @@ class AudioAsset(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         nullable=True,
     )
     analysis_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    technical_completed: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+    )
+    technical_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    technical_completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    technical_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     batch: Mapped[AudioBatch] = relationship(back_populates="assets", lazy="joined")
     prediction: Mapped[Prediction | None] = relationship(

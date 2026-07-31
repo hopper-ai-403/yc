@@ -14,6 +14,7 @@ from app.audio.schemas import (
     AudioDownloadData,
     AudioMetadataRead,
     AudioSegmentsRead,
+    AudioTechnicalRead,
 )
 from app.config.settings import R2Settings
 from app.shared.storage.provider import StorageProvider
@@ -103,4 +104,19 @@ class AudioQueryService:
             largest_silence=float(vad.get("largest_silence") or 0.0),
             speech_start=vad.get("speech_start"),
             speech_end=vad.get("speech_end"),
+        )
+
+    async def get_technical(self, audio_id: UUID) -> AudioTechnicalRead:
+        asset = await self._assets.find_by_id(audio_id)
+        if asset is None:
+            raise AudioAssetNotFoundException(audio_id)
+
+        payload = dict(asset.technical_json or {})
+        return AudioTechnicalRead(
+            audio_id=asset.id,
+            audio_quality=str(payload.get("audio_quality") or "CLEAR"),
+            speaker_overlap_present=bool(payload.get("speaker_overlap_present") or False),
+            long_silence_present=bool(payload.get("long_silence_present") or False),
+            technical_version=asset.technical_version,
+            technical_completed=asset.technical_completed,
         )

@@ -15,6 +15,7 @@ from app.audio.schemas import (
     AudioDownloadData,
     AudioMetadataRead,
     AudioSegmentsRead,
+    AudioTechnicalRead,
 )
 from app.shared.domain.enums import AudioStatus
 
@@ -107,6 +108,16 @@ def api_client(audio_read: AudioAssetRead) -> TestClient:
             speech_end=0.6,
         )
     )
+    service.get_technical = AsyncMock(
+        return_value=AudioTechnicalRead(
+            audio_id=audio_read.id,
+            audio_quality="CLEAR",
+            speaker_overlap_present=False,
+            long_silence_present=False,
+            technical_version="1.0.0",
+            technical_completed=True,
+        )
+    )
     application.dependency_overrides[get_audio_query_service] = lambda: service
 
     redis_mock = AsyncMock()
@@ -145,3 +156,14 @@ def test_get_analysis_and_segments(api_client: TestClient, audio_read: AudioAsse
     segments = api_client.get(f"/api/v1/audio/{audio_read.id}/segments")
     assert segments.status_code == 200
     assert segments.json()["data"]["speech_ratio"] == 0.5
+
+
+def test_get_technical(api_client: TestClient, audio_read: AudioAssetRead) -> None:
+    response = api_client.get(f"/api/v1/audio/{audio_read.id}/technical")
+    assert response.status_code == 200
+    body = response.json()["data"]
+    assert body["audio_quality"] == "CLEAR"
+    assert body["speaker_overlap_present"] is False
+    assert body["long_silence_present"] is False
+    assert body["technical_version"] == "1.0.0"
+    assert body["technical_completed"] is True

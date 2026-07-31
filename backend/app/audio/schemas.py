@@ -72,6 +72,17 @@ class AudioAnalysisRead(BaseModel):
     analysis: dict[str, Any] = Field(default_factory=dict)
 
 
+class AudioTechnicalRead(BaseModel):
+    """Technical intelligence response payload."""
+
+    audio_id: UUID
+    audio_quality: str
+    speaker_overlap_present: bool
+    long_silence_present: bool
+    technical_version: str | None = None
+    technical_completed: bool
+
+
 class AudioSegmentsRead(BaseModel):
     """Speech / silence segmentation subset."""
 

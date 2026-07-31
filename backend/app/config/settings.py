@@ -258,6 +258,53 @@ class AnalysisSettings(BaseSettings):
     vad_window_samples: int = 512
 
 
+class TechnicalSettings(BaseSettings):
+    """Technical intelligence engine settings (deterministic rules)."""
+
+    model_config = SettingsConfigDict(env_prefix="TECHNICAL_", extra="ignore")
+
+    # Long silence rules.
+    long_silence_seconds: float = 6.0
+    total_silence_ratio: float = 0.55
+    min_speech_ratio: float = 0.35
+
+    # Quality scoring thresholds.
+    clear_threshold: float = 85.0
+    slightly_impaired_threshold: float = 65.0
+
+    # Quality penalties (weights sum to 100 max).
+    snr_penalty_weight: float = 30.0
+    missing_snr_penalty: float = 12.0
+    clipping_penalty_weight: float = 25.0
+    dynamic_range_penalty_weight: float = 20.0
+    silence_penalty_weight: float = 15.0
+    speech_presence_penalty_weight: float = 10.0
+
+    # Quality input thresholds.
+    snr_good_db: float = 25.0
+    snr_ok_db: float = 12.0
+    dynamic_range_good_db: float = 18.0
+    dynamic_range_bad_db: float = 6.0
+    silence_ratio_warn: float = 0.35
+    silence_ratio_bad: float = 0.75
+    speech_ratio_good: float = 0.6
+    speech_ratio_bad: float = 0.15
+
+    # Overlap heuristics (signal-based detector).
+    overlap_threshold: float = 0.6
+    overlap_density_weight: float = 0.35
+    overlap_zcr_weight: float = 0.2
+    overlap_bandwidth_weight: float = 0.25
+    overlap_spread_weight: float = 0.2
+    overlap_density_full_at: float = 0.6
+    overlap_zcr_min: float = 0.02
+    overlap_zcr_max: float = 0.2
+    overlap_bandwidth_min_hz: float = 1500.0
+    overlap_bandwidth_max_hz: float = 5000.0
+    overlap_spread_min: float = 0.4
+    overlap_spread_max: float = 1.4
+
+
 class Settings(BaseSettings):
     """Root settings aggregating all configuration domains."""
 
@@ -279,6 +326,7 @@ class Settings(BaseSettings):
     jobs: JobSettings = Field(default_factory=JobSettings)
     preprocessing: PreprocessingSettings = Field(default_factory=PreprocessingSettings)
     analysis: AnalysisSettings = Field(default_factory=AnalysisSettings)
+    technical: TechnicalSettings = Field(default_factory=TechnicalSettings)
 
 
 @lru_cache
