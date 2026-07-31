@@ -1,5 +1,7 @@
 """StorageProvider interface for object storage backends."""
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from typing import BinaryIO
@@ -48,6 +50,38 @@ class StorageProvider(ABC):
     @abstractmethod
     async def health_check(self) -> bool:
         """Return True if storage is reachable."""
+
+    async def upload_file(
+        self,
+        key: str,
+        data: BinaryIO | bytes,
+        *,
+        content_type: str | None = None,
+        metadata: dict[str, str] | None = None,
+    ) -> str:
+        """Alias for upload used by the upload pipeline."""
+        return await self.upload(
+            key,
+            data,
+            content_type=content_type,
+            metadata=metadata,
+        )
+
+    async def download_file(self, key: str) -> bytes:
+        """Alias for download."""
+        return await self.download(key)
+
+    async def delete_file(self, key: str) -> None:
+        """Alias for delete."""
+        await self.delete(key)
+
+    async def file_exists(self, key: str) -> bool:
+        """Alias for exists."""
+        return await self.exists(key)
+
+    async def list_files(self, prefix: str = "", *, max_keys: int = 1000) -> list[str]:
+        """Alias for list."""
+        return await self.list(prefix, max_keys=max_keys)
 
     async def stream_download(self, key: str) -> AsyncIterator[bytes]:
         """Optionally stream download; default loads full object."""

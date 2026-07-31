@@ -8,10 +8,19 @@ Extension points: Manifest rows, format-specific metadata columns.
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import Float, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import (
+    BigInteger,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -75,6 +84,14 @@ class AudioAsset(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     )
     filename: Mapped[str] = mapped_column(String(512), nullable=False)
     format: Mapped[str] = mapped_column(String(32), nullable=False)
+    extension: Mapped[str] = mapped_column(String(16), nullable=False, default="")
+    mime_type: Mapped[str] = mapped_column(String(128), nullable=False, default="")
+    size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    checksum_sha256: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    uploaded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+    )
     duration: Mapped[float | None] = mapped_column(Float, nullable=True)
     sample_rate: Mapped[int | None] = mapped_column(Integer, nullable=True)
     channels: Mapped[int | None] = mapped_column(Integer, nullable=True)

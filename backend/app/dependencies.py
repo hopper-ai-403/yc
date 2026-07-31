@@ -6,7 +6,7 @@ via FastAPI Depends. Never instantiate them inside routes.
 
 from collections.abc import AsyncGenerator
 
-from fastapi import Request
+from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import Settings, get_settings
@@ -33,10 +33,11 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
             raise
 
 
-def get_storage(settings: Settings | None = None) -> StorageProvider:
+def get_storage(
+    settings: Settings = Depends(get_settings),
+) -> StorageProvider:
     """Provide the configured StorageProvider implementation."""
-    resolved = settings or get_settings()
-    return CloudflareR2Storage(resolved.r2)
+    return CloudflareR2Storage(settings.r2)
 
 
 def get_redis(request: Request) -> RedisClient:

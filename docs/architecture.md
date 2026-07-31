@@ -100,3 +100,5 @@ Error:
 - [Database Schema](architecture/DATABASE_SCHEMA.md)
 - [ER Diagram](architecture/ER_DIAGRAM.md)
 - [Repository Dependencies](architecture/REPOSITORY_DEPENDENCIES.md)
+- [Upload Flow](architecture/UPLOAD_FLOW.md)
+- [R2 Folder Structure](architecture/R2_FOLDER_STRUCTURE.md)

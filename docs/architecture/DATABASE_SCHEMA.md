@@ -38,7 +38,12 @@ Provider: Neon PostgreSQL.
 | id | UUID PK | |
 | batch_id | UUID FK → audio_batches.id | CASCADE, indexed |
 | filename | VARCHAR(512) | |
-| format | VARCHAR(32) | |
+| format | VARCHAR(32) | legacy/format alias |
+| extension | VARCHAR(16) | wav/mp3/ogg |
+| mime_type | VARCHAR(128) | |
+| size_bytes | BIGINT | |
+| checksum_sha256 | VARCHAR(64) | |
+| uploaded_at | TIMESTAMPTZ | upload time |
 | duration | FLOAT | nullable |
 | sample_rate | INTEGER | nullable |
 | channels | INTEGER | nullable |

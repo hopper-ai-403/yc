@@ -4,6 +4,7 @@ These tests require DATABASE_URL / DATABASE_DIRECT_URL to be configured.
 """
 
 from collections.abc import AsyncGenerator
+from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
@@ -48,6 +49,23 @@ from app.shared.domain.value_objects import (
     QualityResult,
     SilenceResult,
 )
+
+
+def _asset_kwargs(
+    batch_id: object, filename: str, storage_key: str
+) -> dict[str, object]:
+    return {
+        "batch_id": batch_id,
+        "filename": filename,
+        "format": "wav",
+        "extension": "wav",
+        "mime_type": "audio/wav",
+        "size_bytes": 128,
+        "checksum_sha256": "a" * 64,
+        "uploaded_at": datetime.now(timezone.utc),
+        "storage_key": storage_key,
+        "processing_status": AudioStatus.UPLOADED,
+    }
 
 
 @pytest.fixture(scope="module")
@@ -122,14 +140,14 @@ async def test_batch_asset_job_prediction_flow(session: AsyncSession) -> None:
     )
     asset = await assets.create(
         AudioAsset(
-            batch_id=batch.id,
-            filename="call-1.wav",
-            format="wav",
+            **_asset_kwargs(
+                batch.id,
+                "call-1.wav",
+                f"batches/{batch.id}/{uuid4()}.wav",
+            ),
             duration=10.0,
             sample_rate=16000,
             channels=1,
-            storage_key=f"batches/{batch.id}/{uuid4()}.wav",
-            processing_status=AudioStatus.UPLOADED,
         )
     )
     job = await jobs.create(
@@ -201,10 +219,11 @@ async def test_prediction_rejects_invalid_noise_on_save(
     )
     asset = await assets.create(
         AudioAsset(
-            batch_id=batch.id,
-            filename="a.wav",
-            format="wav",
-            storage_key=f"batches/{batch.id}/{uuid4()}.wav",
+            **_asset_kwargs(
+                batch.id,
+                "a.wav",
+                f"batches/{batch.id}/{uuid4()}.wav",
+            )
         )
     )
     bad = Prediction(

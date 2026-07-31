@@ -120,6 +120,42 @@ class R2Settings(BaseSettings):
     signed_url_expiry_seconds: int = 3600
 
 
+class UploadSettings(BaseSettings):
+    """Upload pipeline validation and safety limits."""
+
+    model_config = SettingsConfigDict(env_prefix="UPLOAD_", extra="ignore")
+
+    max_file_size_bytes: int = 100 * 1024 * 1024
+    max_zip_size_bytes: int = 500 * 1024 * 1024
+    max_files_per_batch: int = 500
+    max_uncompressed_zip_bytes: int = 1024 * 1024 * 1024
+    allowed_extensions: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: [".wav", ".mp3", ".ogg"]
+    )
+    allowed_mime_types: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: [
+            "audio/wav",
+            "audio/x-wav",
+            "audio/wave",
+            "audio/mpeg",
+            "audio/mp3",
+            "audio/ogg",
+            "application/ogg",
+            "application/zip",
+            "application/x-zip-compressed",
+            "multipart/x-zip",
+        ]
+    )
+    system_uploader_email: str = "system.upload@audio-intelligence.local"
+
+    @field_validator("allowed_extensions", "allowed_mime_types", mode="before")
+    @classmethod
+    def parse_csv_list(cls, value: object) -> object:
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value
+
+
 class LoggingSettings(BaseSettings):
     """Structured logging settings."""
 
@@ -168,6 +204,7 @@ class Settings(BaseSettings):
     redis: RedisSettings = Field(default_factory=RedisSettings)
     jwt: JWTSettings = Field(default_factory=JWTSettings)
     r2: R2Settings = Field(default_factory=R2Settings)
+    upload: UploadSettings = Field(default_factory=UploadSettings)
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
     ai: AISettings = Field(default_factory=AISettings)
     celery: CelerySettings = Field(default_factory=CelerySettings)
