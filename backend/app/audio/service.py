@@ -2,11 +2,19 @@
 
 from __future__ import annotations
 
+import json
 from uuid import UUID
 
+from app.audio.analysis.exceptions import AnalysisNotFoundException
 from app.audio.preprocessing.exceptions import AudioAssetNotFoundException
 from app.audio.repository import AudioRepository
-from app.audio.schemas import AudioAssetRead, AudioDownloadData, AudioMetadataRead
+from app.audio.schemas import (
+    AudioAnalysisRead,
+    AudioAssetRead,
+    AudioDownloadData,
+    AudioMetadataRead,
+    AudioSegmentsRead,
+)
 from app.config.settings import R2Settings
 from app.shared.storage.provider import StorageProvider
 
@@ -61,4 +69,38 @@ class AudioQueryService:
             storage_key=key,
             content_variant=variant,
             expires_in=expires_in,
+        )
+
+    async def get_analysis(self, audio_id: UUID) -> AudioAnalysisRead:
+        asset = await self._assets.find_by_id(audio_id)
+        if asset is None:
+            raise AudioAssetNotFoundException(audio_id)
+        if not asset.analysis_completed and not asset.analysis_json:
+            raise AnalysisNotFoundException(audio_id)
+
+        payload = dict(asset.analysis_json or {})
+        if not payload and asset.analysis_storage_key:
+            raw = await self._storage.download(asset.analysis_storage_key)
+            payload = json.loads(raw.decode("utf-8"))
+
+        return AudioAnalysisRead(
+            audio_id=asset.id,
+            analysis_completed=asset.analysis_completed,
+            analysis_version=asset.analysis_version,
+            analysis_storage_key=asset.analysis_storage_key,
+            analysis=payload,
+        )
+
+    async def get_segments(self, audio_id: UUID) -> AudioSegmentsRead:
+        analysis = await self.get_analysis(audio_id)
+        vad = dict(analysis.analysis.get("vad") or {})
+        return AudioSegmentsRead(
+            audio_id=audio_id,
+            speech_segments=list(vad.get("speech_segments") or []),
+            silence_segments=list(vad.get("silence_segments") or []),
+            speech_duration=float(vad.get("speech_duration") or 0.0),
+            speech_ratio=float(vad.get("speech_ratio") or 0.0),
+            largest_silence=float(vad.get("largest_silence") or 0.0),
+            speech_start=vad.get("speech_start"),
+            speech_end=vad.get("speech_end"),
         )

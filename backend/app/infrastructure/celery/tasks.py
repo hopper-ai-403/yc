@@ -1,9 +1,9 @@
-"""Celery tasks for job orchestration and audio preprocessing (no AI inference).
+"""Celery tasks for job orchestration, preprocessing, and analysis (no AI labels).
 
-Purpose: Drive asynchronous batch lifecycle and preprocessing pipeline.
-Responsibilities: process_batch, process_audio (→ preprocess), finalize, heartbeat.
-Dependencies: JobService, PreprocessingService, Redis progress cache, async DB session.
-Extension points: Replace preprocess with preprocess → infer → aggregate.
+Purpose: Drive asynchronous batch lifecycle through preprocess → analyze.
+Responsibilities: process_batch, process_audio, finalize, heartbeat.
+Dependencies: JobService, PreprocessingService, AnalysisService, Redis, DB.
+Extension points: Add inference engines after analyze_audio.
 """
 
 from __future__ import annotations
@@ -242,6 +242,43 @@ async def _process_audio(
             "status": "FAILED",
             "error": str(exc),
             "code": getattr(exc, "code", "PREPROCESSING_ERROR"),
+            "worker_id": worker_id,
+        }
+
+    # Analysis foundation stage (VAD + features; no AI classification).
+    from app.audio.analysis.exceptions import (
+        AnalysisException,
+        AnalysisTimeoutException,
+        FeatureExtractionException,
+        InvalidWaveformException,
+        VADException,
+    )
+    from app.audio.analysis.factory import build_analysis_service
+
+    try:
+        async def analyze(session):  # type: ignore[no-untyped-def]
+            service = build_analysis_service(session)
+            return await service.analyze_audio(audio_id)
+
+        await with_session(analyze)
+    except AnalysisTimeoutException:
+        raise TimeoutError("analysis timed out") from None
+    except (InvalidWaveformException, VADException, FeatureExtractionException) as exc:
+        await with_session(_mark_audio_failed(audio_id, job_id, worker_id, str(exc)))
+        return {
+            "audio_id": str(audio_id),
+            "status": "FAILED",
+            "error": str(exc),
+            "code": getattr(exc, "code", "ANALYSIS_ERROR"),
+            "worker_id": worker_id,
+        }
+    except AnalysisException as exc:
+        await with_session(_mark_audio_failed(audio_id, job_id, worker_id, str(exc)))
+        return {
+            "audio_id": str(audio_id),
+            "status": "FAILED",
+            "error": str(exc),
+            "code": getattr(exc, "code", "ANALYSIS_ERROR"),
             "worker_id": worker_id,
         }
 

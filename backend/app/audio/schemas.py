@@ -32,6 +32,10 @@ class AudioAssetRead(BaseModel):
     processing_status: AudioStatus
     is_preprocessed: bool
     preprocessed_at: datetime | None = None
+    analysis_completed: bool = False
+    analysis_storage_key: str | None = None
+    analysis_version: str | None = None
+    analysis_completed_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -56,3 +60,26 @@ class AudioDownloadData(BaseModel):
     storage_key: str
     content_variant: str
     expires_in: int
+
+
+class AudioAnalysisRead(BaseModel):
+    """Full analysis artifact response."""
+
+    audio_id: UUID
+    analysis_completed: bool
+    analysis_version: str | None = None
+    analysis_storage_key: str | None = None
+    analysis: dict[str, Any] = Field(default_factory=dict)
+
+
+class AudioSegmentsRead(BaseModel):
+    """Speech / silence segmentation subset."""
+
+    audio_id: UUID
+    speech_segments: list[dict[str, float]] = Field(default_factory=list)
+    silence_segments: list[dict[str, float]] = Field(default_factory=list)
+    speech_duration: float = 0.0
+    speech_ratio: float = 0.0
+    largest_silence: float = 0.0
+    speech_start: float | None = None
+    speech_end: float | None = None

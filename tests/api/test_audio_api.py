@@ -9,7 +9,13 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
-from app.audio.schemas import AudioAssetRead, AudioDownloadData, AudioMetadataRead
+from app.audio.schemas import (
+    AudioAnalysisRead,
+    AudioAssetRead,
+    AudioDownloadData,
+    AudioMetadataRead,
+    AudioSegmentsRead,
+)
 from app.shared.domain.enums import AudioStatus
 
 
@@ -69,6 +75,38 @@ def api_client(audio_read: AudioAssetRead) -> TestClient:
             expires_in=3600,
         )
     )
+    service.get_analysis = AsyncMock(
+        return_value=AudioAnalysisRead(
+            audio_id=audio_read.id,
+            analysis_completed=True,
+            analysis_version="1.0.0",
+            analysis_storage_key="uploads/b/analysis/a.json",
+            analysis={
+                "vad": {
+                    "speech_segments": [{"start": 0.1, "end": 0.6}],
+                    "silence_segments": [{"start": 0.0, "end": 0.1}],
+                    "speech_duration": 0.5,
+                    "speech_ratio": 0.5,
+                    "largest_silence": 0.1,
+                    "speech_start": 0.1,
+                    "speech_end": 0.6,
+                },
+                "features": {"mfcc": [0.0] * 13},
+            },
+        )
+    )
+    service.get_segments = AsyncMock(
+        return_value=AudioSegmentsRead(
+            audio_id=audio_read.id,
+            speech_segments=[{"start": 0.1, "end": 0.6}],
+            silence_segments=[{"start": 0.0, "end": 0.1}],
+            speech_duration=0.5,
+            speech_ratio=0.5,
+            largest_silence=0.1,
+            speech_start=0.1,
+            speech_end=0.6,
+        )
+    )
     application.dependency_overrides[get_audio_query_service] = lambda: service
 
     redis_mock = AsyncMock()
@@ -95,3 +133,15 @@ def test_get_audio_metadata_download(api_client: TestClient, audio_read: AudioAs
     download = api_client.get(f"/api/v1/audio/{audio_read.id}/download")
     assert download.status_code == 200
     assert download.json()["data"]["content_variant"] == "normalized"
+
+
+def test_get_analysis_and_segments(api_client: TestClient, audio_read: AudioAssetRead) -> None:
+    analysis = api_client.get(f"/api/v1/audio/{audio_read.id}/analysis")
+    assert analysis.status_code == 200
+    body = analysis.json()["data"]
+    assert body["analysis_completed"] is True
+    assert "vad" in body["analysis"]
+
+    segments = api_client.get(f"/api/v1/audio/{audio_read.id}/segments")
+    assert segments.status_code == 200
+    assert segments.json()["data"]["speech_ratio"] == 0.5

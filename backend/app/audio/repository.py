@@ -73,6 +73,18 @@ class AudioRepository(ABC):
     ) -> AudioAsset | None:
         """Persist preprocessing outputs onto the asset."""
 
+    @abstractmethod
+    async def save_analysis_result(
+        self,
+        asset_id: UUID,
+        *,
+        analysis_storage_key: str,
+        analysis_version: str,
+        analysis_json: dict[str, Any],
+        analysis_completed_at: datetime,
+    ) -> AudioAsset | None:
+        """Persist analysis completion markers and artifact JSON."""
+
 
 class SqlAlchemyAudioBatchRepository(AudioBatchRepository):
     """SQLAlchemy-backed AudioBatchRepository."""
@@ -183,6 +195,27 @@ class SqlAlchemyAudioRepository(AudioRepository):
         asset.metadata_json = payload
         asset.is_preprocessed = True
         asset.preprocessed_at = preprocessed_at
+        await self._session.flush()
+        await self._session.refresh(asset)
+        return asset
+
+    async def save_analysis_result(
+        self,
+        asset_id: UUID,
+        *,
+        analysis_storage_key: str,
+        analysis_version: str,
+        analysis_json: dict[str, Any],
+        analysis_completed_at: datetime,
+    ) -> AudioAsset | None:
+        asset = await self.find_by_id(asset_id)
+        if asset is None:
+            return None
+        asset.analysis_storage_key = analysis_storage_key
+        asset.analysis_version = analysis_version
+        asset.analysis_json = dict(analysis_json)
+        asset.analysis_completed = True
+        asset.analysis_completed_at = analysis_completed_at
         await self._session.flush()
         await self._session.refresh(asset)
         return asset

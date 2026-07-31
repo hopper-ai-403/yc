@@ -244,6 +244,20 @@ class PreprocessingSettings(BaseSettings):
         return value
 
 
+class AnalysisSettings(BaseSettings):
+    """Shared audio analysis foundation settings."""
+
+    model_config = SettingsConfigDict(env_prefix="ANALYSIS_", extra="ignore")
+
+    vad_backend: Literal["silero", "energy"] = "silero"
+    expected_sample_rate: int = 16_000
+    timeout_seconds: int = 120
+    vad_threshold: float = 0.5
+    vad_min_speech_ms: int = 250
+    vad_min_silence_ms: int = 100
+    vad_window_samples: int = 512
+
+
 class Settings(BaseSettings):
     """Root settings aggregating all configuration domains."""
 
@@ -264,6 +278,7 @@ class Settings(BaseSettings):
     celery: CelerySettings = Field(default_factory=CelerySettings)
     jobs: JobSettings = Field(default_factory=JobSettings)
     preprocessing: PreprocessingSettings = Field(default_factory=PreprocessingSettings)
+    analysis: AnalysisSettings = Field(default_factory=AnalysisSettings)
 
 
 @lru_cache

@@ -8,11 +8,11 @@ Bucket: configured via `R2_BUCKET_NAME` (example: `ycaudiointelligence`)
     {batch_id}/
       original/
         call-001.wav
-        call-002.mp3
-        call-003.ogg
       normalized/
         {audio_id}.wav
       metadata/
+        {audio_id}.json
+      analysis/
         {audio_id}.json
 ```
 
@@ -22,6 +22,7 @@ Bucket: configured via `R2_BUCKET_NAME` (example: `ycaudiointelligence`)
 uploads/{batch_id}/original/{filename}
 uploads/{batch_id}/normalized/{audio_id}.wav
 uploads/{batch_id}/metadata/{audio_id}.json
+uploads/{batch_id}/analysis/{audio_id}.json
 ```
 
 ## Rules
