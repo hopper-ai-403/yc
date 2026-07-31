@@ -2,7 +2,7 @@
 
 Business rules encoded here:
 - Confidence must be between 0 and 1.
-- Noise type must be empty when no noise exists.
+- Noise type must be empty or NONE when no noise exists.
 - Noise severity must be NONE when no noise exists.
 """
 
@@ -38,9 +38,9 @@ class NoiseResult(BaseModel):
     @model_validator(mode="after")
     def validate_noise_invariants(self) -> "NoiseResult":
         if not self.present:
-            if self.type.strip():
+            if self.type.strip() and self.type.strip().upper() != "NONE":
                 raise InvariantViolationException(
-                    "Noise type must be empty when no noise exists",
+                    "Noise type must be empty or NONE when no noise exists",
                     details={"type": self.type, "present": self.present},
                 )
             if self.severity is not NoiseSeverity.NONE:

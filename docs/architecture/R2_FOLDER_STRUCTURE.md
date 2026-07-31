@@ -20,6 +20,8 @@ Bucket: configured via `R2_BUCKET_NAME` (example: `ycaudiointelligence`)
         {audio_id}.json
       speech/
         {audio_id}.json
+      predictions/
+        {audio_id}.json
 ```
 
 ## Key formats
@@ -32,6 +34,7 @@ uploads/{batch_id}/analysis/{audio_id}.json
 uploads/{batch_id}/technical/{audio_id}.json
 uploads/{batch_id}/acoustic/{audio_id}.json
 uploads/{batch_id}/speech/{audio_id}.json
+uploads/{batch_id}/predictions/{audio_id}.json
 ```
 
 ## Rules

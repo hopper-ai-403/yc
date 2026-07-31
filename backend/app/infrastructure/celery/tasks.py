@@ -360,6 +360,32 @@ async def _process_audio(
             "worker_id": worker_id,
         }
 
+    # Prediction stage (aggregate → validate → confidence → build → persist).
+    from app.prediction.exceptions import (
+        PredictionArtifactMissingException,
+        PredictionException,
+    )
+    from app.prediction.factory import build_prediction_service
+
+    try:
+        async def predict(session):  # type: ignore[no-untyped-def]
+            service = build_prediction_service(session)
+            return await service.generate_prediction(audio_id)
+
+        await with_session(predict)
+    except PredictionArtifactMissingException as exc:
+        # Transient: engine results may not be persisted yet; Celery retries.
+        raise TimeoutError(f"prediction artifacts unavailable: {exc}") from None
+    except PredictionException as exc:
+        await with_session(_mark_audio_failed(audio_id, job_id, worker_id, str(exc)))
+        return {
+            "audio_id": str(audio_id),
+            "status": "FAILED",
+            "error": str(exc),
+            "code": getattr(exc, "code", "PREDICTION_ERROR"),
+            "worker_id": worker_id,
+        }
+
     async def finish(session):  # type: ignore[no-untyped-def]
         service = build_job_service(session)
         if await service.is_cancelled(job_id):

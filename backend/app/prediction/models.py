@@ -8,18 +8,20 @@ Extension points: Additional analyzer output columns.
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
+    DateTime,
     Float,
     ForeignKey,
     String,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.shared.database.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -88,6 +90,14 @@ class Prediction(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     speaker_overlap: Mapped[bool] = mapped_column(Boolean, nullable=False)
     long_silence: Mapped[bool] = mapped_column(Boolean, nullable=False)
     confidence: Mapped[float] = mapped_column(Float, nullable=False)
+    prediction_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    prediction_completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    prediction_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    internal_prediction_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    confidence_breakdown: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     is_persisted: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
@@ -111,10 +121,12 @@ class Prediction(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     def apply_result(self, result: PredictionResult) -> None:
         """Populate columns from a validated PredictionResult value object."""
         self.assert_mutable()
-        if not result.noise.present and result.noise.type.strip():
-            raise InvariantViolationException(
-                "Noise type must be empty when no noise exists"
-            )
+        if not result.noise.present:
+            noise_type = result.noise.type.strip()
+            if noise_type and noise_type.upper() != "NONE":
+                raise InvariantViolationException(
+                    "Noise type must be empty or NONE when no noise exists"
+                )
         if not result.noise.present and result.noise.severity is not NoiseSeverity.NONE:
             raise InvariantViolationException(
                 "Noise severity must be NONE when no noise exists"

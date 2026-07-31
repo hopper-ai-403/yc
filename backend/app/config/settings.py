@@ -388,6 +388,42 @@ class SpeechSettings(BaseSettings):
         return value
 
 
+class PredictionSettings(BaseSettings):
+    """Prediction engine settings (aggregation + confidence)."""
+
+    model_config = SettingsConfigDict(env_prefix="PREDICTION_", extra="ignore")
+
+    prediction_version: str = "1.0.0"
+    confidence_rounding: int = 2
+    internal_prediction_enabled: bool = True
+
+    # Overall confidence weights (JSON override via env).
+    confidence_weights: dict[str, float] = Field(
+        default_factory=lambda: {
+            "speech": 0.4,
+            "technical": 0.3,
+            "acoustic": 0.3,
+        }
+    )
+    # Technical sub-weights: quality / overlap / silence components.
+    confidence_technical_weights: dict[str, float] = Field(
+        default_factory=lambda: {
+            "quality": 0.5,
+            "overlap": 0.25,
+            "silence": 0.25,
+        }
+    )
+
+    @field_validator("confidence_weights", "confidence_technical_weights", mode="before")
+    @classmethod
+    def parse_weight_dict(cls, value: object) -> object:
+        if isinstance(value, str):
+            import json
+
+            return json.loads(value)
+        return value
+
+
 class Settings(BaseSettings):
     """Root settings aggregating all configuration domains."""
 
@@ -412,6 +448,7 @@ class Settings(BaseSettings):
     technical: TechnicalSettings = Field(default_factory=TechnicalSettings)
     acoustic: AcousticSettings = Field(default_factory=AcousticSettings)
     speech: SpeechSettings = Field(default_factory=SpeechSettings)
+    prediction: PredictionSettings = Field(default_factory=PredictionSettings)
 
 
 @lru_cache
