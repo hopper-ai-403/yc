@@ -16,6 +16,7 @@ from app.audio.schemas import (
     AudioSegmentsRead,
     AudioTechnicalRead,
     AudioAcousticRead,
+    AudioSpeechRead,
 )
 from app.config.settings import R2Settings
 from app.shared.storage.provider import StorageProvider
@@ -135,4 +136,18 @@ class AudioQueryService:
             background_noise_severity=str(payload.get("background_noise_severity") or "NONE"),
             acoustic_version=asset.acoustic_version,
             acoustic_completed=asset.acoustic_completed,
+        )
+
+    async def get_speech(self, audio_id: UUID) -> AudioSpeechRead:
+        asset = await self._assets.find_by_id(audio_id)
+        if asset is None:
+            raise AudioAssetNotFoundException(audio_id)
+
+        payload = dict(asset.speech_json or {})
+        return AudioSpeechRead(
+            audio_id=asset.id,
+            emotional_tone=str(payload.get("emotional_tone") or "NEUTRAL"),
+            emotional_intensity=str(payload.get("emotional_intensity") or "LOW"),
+            speech_version=asset.speech_version,
+            speech_completed=asset.speech_completed,
         )

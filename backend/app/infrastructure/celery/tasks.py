@@ -334,6 +334,32 @@ async def _process_audio(
             "worker_id": worker_id,
         }
 
+    # Speech intelligence stage (emotional tone + intensity via SER).
+    from app.ai.speech.exceptions import (
+        SpeechAnalysisException,
+        SpeechArtifactMissingException,
+    )
+    from app.ai.speech.factory import build_speech_service
+
+    try:
+        async def speech(session):  # type: ignore[no-untyped-def]
+            service = build_speech_service(session)
+            return await service.analyze_audio(audio_id)
+
+        await with_session(speech)
+    except SpeechArtifactMissingException as exc:
+        # Transient: waveform may not be readable yet; Celery retries.
+        raise TimeoutError(f"speech artifacts unavailable: {exc}") from None
+    except SpeechAnalysisException as exc:
+        await with_session(_mark_audio_failed(audio_id, job_id, worker_id, str(exc)))
+        return {
+            "audio_id": str(audio_id),
+            "status": "FAILED",
+            "error": str(exc),
+            "code": getattr(exc, "code", "SPEECH_ANALYSIS_ERROR"),
+            "worker_id": worker_id,
+        }
+
     async def finish(session):  # type: ignore[no-untyped-def]
         service = build_job_service(session)
         if await service.is_cancelled(job_id):

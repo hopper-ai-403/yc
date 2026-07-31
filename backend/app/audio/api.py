@@ -15,6 +15,7 @@ from app.audio.schemas import (
     AudioDownloadData,
     AudioMetadataRead,
     AudioSegmentsRead,
+    AudioSpeechRead,
     AudioTechnicalRead,
 )
 from app.audio.service import AudioQueryService
@@ -112,3 +113,16 @@ async def get_audio_acoustic(
 ) -> SuccessResponse[AudioAcousticRead]:
     data = await service.get_acoustic(audio_id)
     return SuccessResponse(message="Audio acoustic results retrieved", data=data)
+
+
+@router.get(
+    "/audio/{audio_id}/speech",
+    response_model=SuccessResponse[AudioSpeechRead],
+    summary="Get speech intelligence results for an audio asset",
+)
+async def get_audio_speech(
+    audio_id: UUID,
+    service: AudioQueryService = Depends(get_audio_query_service),
+) -> SuccessResponse[AudioSpeechRead]:
+    data = await service.get_speech(audio_id)
+    return SuccessResponse(message="Audio speech results retrieved", data=data)

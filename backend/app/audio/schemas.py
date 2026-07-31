@@ -94,6 +94,16 @@ class AudioAcousticRead(BaseModel):
     acoustic_completed: bool
 
 
+class AudioSpeechRead(BaseModel):
+    """Speech intelligence response payload."""
+
+    audio_id: UUID
+    emotional_tone: str
+    emotional_intensity: str
+    speech_version: str | None = None
+    speech_completed: bool
+
+
 class AudioSegmentsRead(BaseModel):
     """Speech / silence segmentation subset."""
 

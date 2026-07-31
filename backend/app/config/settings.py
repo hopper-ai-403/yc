@@ -338,6 +338,56 @@ class AcousticSettings(BaseSettings):
     classify_chatter_min_segments: int = 8
 
 
+class SpeechSettings(BaseSettings):
+    """Speech intelligence (SER) settings."""
+
+    model_config = SettingsConfigDict(env_prefix="SPEECH_", extra="ignore")
+
+    enabled: bool = True
+    model_name: str = "superb/wav2vec2-base-superb-er"
+    expected_sample_rate: int = 16_000
+    device: str = "cpu"
+    top_k: int | None = None
+
+    # Intensity calibration from top-1 probability.
+    intensity_medium_probability: float = 0.45
+    intensity_high_probability: float = 0.7
+
+    # Label mapping: raw model label -> platform tone (JSON override via env).
+    label_mapping: dict[str, str] = Field(
+        default_factory=lambda: {
+            "neu": "NEUTRAL",
+            "neutral": "NEUTRAL",
+            "calm": "NEUTRAL",
+            "hap": "SATISFIED",
+            "happy": "SATISFIED",
+            "happiness": "SATISFIED",
+            "excited": "SATISFIED",
+            "surprised": "SATISFIED",
+            "ang": "FRUSTRATED",
+            "angry": "FRUSTRATED",
+            "frustrated": "FRUSTRATED",
+            "sad": "UPSET",
+            "sadness": "UPSET",
+            "disgust": "UPSET",
+            "dis": "UPSET",
+            "fea": "DISTRESSED",
+            "fear": "DISTRESSED",
+            "fearful": "DISTRESSED",
+        }
+    )
+    unmapped_label_tone: str = "NEUTRAL"
+
+    @field_validator("label_mapping", mode="before")
+    @classmethod
+    def parse_label_mapping(cls, value: object) -> object:
+        if isinstance(value, str):
+            import json
+
+            return json.loads(value)
+        return value
+
+
 class Settings(BaseSettings):
     """Root settings aggregating all configuration domains."""
 
@@ -361,6 +411,7 @@ class Settings(BaseSettings):
     analysis: AnalysisSettings = Field(default_factory=AnalysisSettings)
     technical: TechnicalSettings = Field(default_factory=TechnicalSettings)
     acoustic: AcousticSettings = Field(default_factory=AcousticSettings)
+    speech: SpeechSettings = Field(default_factory=SpeechSettings)
 
 
 @lru_cache

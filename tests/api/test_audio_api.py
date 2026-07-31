@@ -16,6 +16,7 @@ from app.audio.schemas import (
     AudioDownloadData,
     AudioMetadataRead,
     AudioSegmentsRead,
+    AudioSpeechRead,
     AudioTechnicalRead,
 )
 from app.shared.domain.enums import AudioStatus
@@ -129,6 +130,15 @@ def api_client(audio_read: AudioAssetRead) -> TestClient:
             acoustic_completed=True,
         )
     )
+    service.get_speech = AsyncMock(
+        return_value=AudioSpeechRead(
+            audio_id=audio_read.id,
+            emotional_tone="FRUSTRATED",
+            emotional_intensity="MEDIUM",
+            speech_version="1.0.0",
+            speech_completed=True,
+        )
+    )
     application.dependency_overrides[get_audio_query_service] = lambda: service
 
     redis_mock = AsyncMock()
@@ -189,3 +199,13 @@ def test_get_acoustic(api_client: TestClient, audio_read: AudioAssetRead) -> Non
     assert body["background_noise_severity"] == "LOW"
     assert body["acoustic_version"] == "1.0.0"
     assert body["acoustic_completed"] is True
+
+
+def test_get_speech(api_client: TestClient, audio_read: AudioAssetRead) -> None:
+    response = api_client.get(f"/api/v1/audio/{audio_read.id}/speech")
+    assert response.status_code == 200
+    body = response.json()["data"]
+    assert body["emotional_tone"] == "FRUSTRATED"
+    assert body["emotional_intensity"] == "MEDIUM"
+    assert body["speech_version"] == "1.0.0"
+    assert body["speech_completed"] is True

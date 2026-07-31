@@ -154,6 +154,17 @@ class AudioAsset(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     )
     acoustic_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
     acoustic_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    speech_completed: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+    )
+    speech_completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    speech_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    speech_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     batch: Mapped[AudioBatch] = relationship(back_populates="assets", lazy="joined")
     prediction: Mapped[Prediction | None] = relationship(
