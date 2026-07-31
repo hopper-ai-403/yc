@@ -5,10 +5,16 @@ Business logic must never call os.getenv() directly.
 """
 
 from functools import lru_cache
-from typing import Literal
+from pathlib import Path
+from typing import Annotated, Literal
 
+from dotenv import load_dotenv
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+load_dotenv(_REPO_ROOT / ".env")
+load_dotenv(Path.cwd() / ".env", override=False)
 
 
 class AppSettings(BaseSettings):
@@ -23,7 +29,7 @@ class AppSettings(BaseSettings):
     api_prefix: str = "/api/v1"
     host: str = "0.0.0.0"
     port: int = 8000
-    allowed_origins: list[str] = Field(
+    allowed_origins: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: ["http://localhost:3000"]
     )
 
@@ -36,16 +42,48 @@ class AppSettings(BaseSettings):
 
 
 class DatabaseSettings(BaseSettings):
-    """PostgreSQL database settings."""
+    """Neon PostgreSQL database settings.
+
+    Use the Neon pooled connection string for the application (`url`) and the
+    direct (non-pooler) connection string for Alembic migrations (`direct_url`).
+    """
 
     model_config = SettingsConfigDict(env_prefix="DATABASE_", extra="ignore")
 
-    url: str = "postgresql+psycopg://aip:aip@postgres:5432/aip"
+    url: str = (
+        "postgresql+psycopg://user:password@ep-xxx.region.aws.neon.tech/"
+        "neondb?sslmode=require"
+    )
+    direct_url: str = ""
     pool_size: int = 5
-    max_overflow: int = 10
+    max_overflow: int = 5
     pool_timeout: int = 30
-    pool_recycle: int = 1800
+    pool_recycle: int = 300
     echo: bool = False
+
+    @field_validator("url", "direct_url", mode="before")
+    @classmethod
+    def normalize_database_url(cls, value: object) -> object:
+        if not isinstance(value, str) or not value:
+            return value
+        normalized = value
+        if normalized.startswith("postgres://"):
+            normalized = "postgresql+psycopg://" + normalized.removeprefix(
+                "postgres://"
+            )
+        elif normalized.startswith("postgresql://"):
+            normalized = "postgresql+psycopg://" + normalized.removeprefix(
+                "postgresql://"
+            )
+        if "neon.tech" in normalized and "sslmode=" not in normalized:
+            separator = "&" if "?" in normalized else "?"
+            normalized = f"{normalized}{separator}sslmode=require"
+        return normalized
+
+    @property
+    def migration_url(self) -> str:
+        """Prefer the direct Neon endpoint for migrations when configured."""
+        return self.direct_url or self.url
 
 
 class RedisSettings(BaseSettings):

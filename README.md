@@ -26,7 +26,7 @@ Authentication, uploads, database models, and AI inference are intentionally def
 | Workers | Celery, Redis, Flower |
 | Storage | Cloudflare R2 (via `StorageProvider`) |
 | Frontend | Next.js 15, React 19, TypeScript, Tailwind, TanStack Query |
-| Infra | Docker Compose, PostgreSQL 17, Redis |
+| Infra | Docker Compose, Neon PostgreSQL, Redis |
 | Quality | Ruff, Black, Pyright, Pytest, Pre-commit, GitHub Actions |
 
 ## Quick Start

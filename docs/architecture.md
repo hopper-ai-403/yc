@@ -17,9 +17,9 @@ Sprint 0 establishes the engineering foundation. Business capabilities are added
 ## Runtime Topology
 
 ```
-┌────────────┐     ┌────────────┐     ┌────────────┐
-│  Frontend  │────▶│  Backend   │────▶│ PostgreSQL │
-│  Next.js   │     │  FastAPI   │     └────────────┘
+┌────────────┐     ┌────────────┐     ┌──────────────────┐
+│  Frontend  │────▶│  Backend   │────▶│ Neon PostgreSQL  │
+│  Next.js   │     │  FastAPI   │     └──────────────────┘
 └────────────┘     └─────┬──────┘
                          │
            ┌─────────────┼─────────────┐
@@ -34,6 +34,7 @@ Sprint 0 establishes the engineering foundation. Business capabilities are added
                    └─────────┘
 ```
 
+PostgreSQL is provided by [Neon](https://neon.tech) (serverless). Redis and workers remain in Docker Compose.
 ## Backend Layers
 
 | Layer | Location | Responsibility |
@@ -92,3 +93,10 @@ Error:
 - New AI engines under `backend/app/ai/<engine>/`
 - New infrastructure adapters under `backend/app/infrastructure/`
 - Storage remains behind `StorageProvider`
+
+## Domain documentation
+
+- [Domain Model](architecture/DOMAIN_MODEL.md)
+- [Database Schema](architecture/DATABASE_SCHEMA.md)
+- [ER Diagram](architecture/ER_DIAGRAM.md)
+- [Repository Dependencies](architecture/REPOSITORY_DEPENDENCIES.md)

@@ -6,6 +6,7 @@
 - Python 3.12+
 - Node.js 22+
 - Git
+- A [Neon](https://neon.tech) project (PostgreSQL)
 
 ## Environment
 
@@ -20,7 +21,7 @@ Key variable groups:
 | Prefix | Purpose |
 | --- | --- |
 | `APP_` | Application runtime |
-| `DATABASE_` | PostgreSQL |
+| `DATABASE_` | Neon PostgreSQL |
 | `REDIS_` | Redis |
 | `JWT_` | Auth tokens (Sprint 1) |
 | `R2_` | Cloudflare R2 |
@@ -30,9 +31,31 @@ Key variable groups:
 
 Never call `os.getenv()` from business logic. Use `get_settings()`.
 
-## Docker Compose (recommended)
+## Neon PostgreSQL
 
-From the repository root:
+1. Create a Neon project and database.
+2. From the Neon console, copy:
+   - **Pooled** connection string → `DATABASE_URL` (host includes `-pooler`)
+   - **Direct** connection string → `DATABASE_DIRECT_URL` (no `-pooler`; used by Alembic)
+3. Keep `sslmode=require` (added automatically for `neon.tech` hosts if missing).
+4. Neon URLs starting with `postgresql://` or `postgres://` are normalized to `postgresql+psycopg://`.
+
+Example:
+
+```env
+DATABASE_URL=postgresql://user:pass@ep-xxx-pooler.region.aws.neon.tech/neondb?sslmode=require
+DATABASE_DIRECT_URL=postgresql://user:pass@ep-xxx.region.aws.neon.tech/neondb?sslmode=require
+```
+
+Verify connectivity after the API is up:
+
+```bash
+curl http://localhost:8000/health/database
+```
+
+## Docker Compose
+
+Compose runs application services only. Postgres is **not** containerized — Neon is the database.
 
 ```bash
 docker compose up --build
@@ -44,10 +67,10 @@ Services:
 | --- | --- | --- |
 | backend | 8000 | http://localhost:8000 |
 | frontend | 3000 | http://localhost:3000 |
-| postgres | 5432 | internal / localhost |
 | redis | 6379 | internal / localhost |
 | flower | 5555 | http://localhost:5555 |
 | worker | — | Celery worker |
+| Neon | — | External PostgreSQL |
 
 Health probes:
 
@@ -68,10 +91,11 @@ source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements-dev.txt
 pip install -e .
 cp ../.env.example ../.env
+# Paste Neon URLs into ../.env
 uvicorn app.main:app --reload --port 8000
 ```
 
-Ensure Postgres and Redis are reachable (Compose or local installs).
+Ensure Neon and Redis are reachable.
 
 ## Frontend (host machine)
 
@@ -84,13 +108,15 @@ npm run dev
 
 ## Alembic
 
-Migrations toolchain is configured. No models exist in Sprint 0.
+Migrations use `DATABASE_DIRECT_URL` when set (Neon direct endpoint), otherwise `DATABASE_URL`.
 
 ```bash
 cd backend
 alembic current
 alembic history
 ```
+
+No models exist in Sprint 0.
 
 ## Cloudflare R2
 

@@ -1,11 +1,16 @@
 """Shared pytest fixtures."""
 
+import asyncio
 import os
+import sys
 from collections.abc import Generator
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
+
+if sys.platform.startswith("win"):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 os.environ.setdefault("APP_ENVIRONMENT", "test")
 os.environ.setdefault("LOGGING_JSON_LOGS", "false")

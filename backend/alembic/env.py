@@ -1,22 +1,35 @@
 """Alembic migration environment.
 
-No models exist in Sprint 0. This configures the migration runtime only.
+Loads all ORM models so autogenerate and upgrades see full metadata.
+Uses DATABASE_DIRECT_URL (Neon direct) when configured.
 """
 
 import asyncio
+import sys
 from logging.config import fileConfig
+from pathlib import Path
 
 from alembic import context
+from dotenv import load_dotenv
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from app.config.settings import get_settings
-from app.shared.database.base import Base
+if sys.platform.startswith("win"):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+# Load repo-root .env before Settings resolution.
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+load_dotenv(_REPO_ROOT / ".env")
+load_dotenv(Path.cwd() / ".env", override=False)
+
+from app.config.settings import get_settings  # noqa: E402
+from app.shared.database.base import Base  # noqa: E402
+import app.shared.database.models_registry  # noqa: E402, F401
 
 config = context.config
 settings = get_settings()
-config.set_main_option("sqlalchemy.url", settings.database.url)
+config.set_main_option("sqlalchemy.url", settings.database.migration_url)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

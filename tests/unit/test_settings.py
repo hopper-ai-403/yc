@@ -12,6 +12,20 @@ def test_settings_loads_defaults() -> None:
     assert settings.database.pool_size >= 1
 
 
+def test_neon_url_normalization() -> None:
+    from app.config.settings import DatabaseSettings
+
+    settings = DatabaseSettings(
+        url=("postgresql://user:pass@ep-xxx-pooler.us-east-2.aws.neon.tech/neondb"),
+        direct_url=("postgres://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb"),
+    )
+    assert settings.url.startswith("postgresql+psycopg://")
+    assert "sslmode=require" in settings.url
+    assert settings.direct_url.startswith("postgresql+psycopg://")
+    assert "sslmode=require" in settings.direct_url
+    assert settings.migration_url == settings.direct_url
+
+
 def test_get_settings_is_cached() -> None:
     get_settings.cache_clear()
     first = get_settings()

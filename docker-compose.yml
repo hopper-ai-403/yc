@@ -1,27 +1,6 @@
 name: audio-intelligence-platform
 
 services:
-  postgres:
-    image: postgres:17-alpine
-    container_name: aip-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${DATABASE_USER:-aip}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-aip}
-      POSTGRES_DB: ${DATABASE_NAME:-aip}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-aip} -d ${DATABASE_NAME:-aip}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    networks:
-      - aip-network
-
   redis:
     image: redis:7-alpine
     container_name: aip-redis
@@ -50,7 +29,7 @@ services:
       - .env
     environment:
       APP_ENVIRONMENT: ${APP_ENVIRONMENT:-development}
-      DATABASE_URL: postgresql+psycopg://${DATABASE_USER:-aip}:${DATABASE_PASSWORD:-aip}@postgres:5432/${DATABASE_NAME:-aip}
+      # DATABASE_URL / DATABASE_DIRECT_URL come from .env (Neon).
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
@@ -59,8 +38,6 @@ services:
     volumes:
       - ./backend:/app
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
@@ -82,7 +59,7 @@ services:
       - .env
     environment:
       APP_ENVIRONMENT: ${APP_ENVIRONMENT:-development}
-      DATABASE_URL: postgresql+psycopg://${DATABASE_USER:-aip}:${DATABASE_PASSWORD:-aip}@postgres:5432/${DATABASE_NAME:-aip}
+      # DATABASE_URL / DATABASE_DIRECT_URL come from .env (Neon).
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
@@ -90,8 +67,6 @@ services:
       - ./backend:/app
       - worker_tmp:/tmp
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
       backend:
@@ -152,7 +127,6 @@ services:
       - aip-network
 
 volumes:
-  postgres_data:
   redis_data:
   worker_tmp:
 

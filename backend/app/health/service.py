@@ -29,7 +29,7 @@ class HealthService:
         self._celery_broker_url = celery_broker_url
 
     async def check_database(self) -> ComponentHealth:
-        """Probe PostgreSQL connectivity."""
+        """Probe Neon PostgreSQL connectivity."""
         healthy = await check_database_connection(self._engine)
         logger.info(
             "health_check",

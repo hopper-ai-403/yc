@@ -137,7 +137,7 @@ Redis
 
 Celery
 
-PostgreSQL
+Neon (PostgreSQL)
 
 FFmpeg
 
@@ -170,6 +170,17 @@ SQLAlchemy 2.x
 Alembic
 
 UUID primary keys
+
+Provider:
+
+Neon (serverless PostgreSQL)
+
+Prefer:
+
+- `DATABASE_URL` — Neon pooled endpoint for application traffic
+- `DATABASE_DIRECT_URL` — Neon direct endpoint for Alembic migrations
+
+Always use TLS (`sslmode=require`).
 
 Every table must contain:
 
@@ -340,15 +351,17 @@ worker
 
 frontend
 
-postgres
-
 redis
 
 flower
 
+PostgreSQL is provided by Neon (external). Do not run Postgres in Compose unless
+explicitly required for an offline/dev-only profile.
+
 Never assume localhost.
 
-Everything communicates through Docker networks.
+Everything communicates through Docker networks (except Neon, which is reached
+over the public Neon endpoint with TLS).
 
 ---
 
