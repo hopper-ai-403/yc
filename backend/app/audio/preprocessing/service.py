@@ -42,7 +42,11 @@ class PreprocessingService:
         if asset is None:
             raise AudioAssetNotFoundException(audio_id)
 
-        if asset.is_preprocessed and asset.normalized_storage_key and asset.metadata_json:
+        if (
+            asset.is_preprocessed
+            and asset.normalized_storage_key
+            and asset.metadata_json
+        ):
             logger.info(
                 "preprocessing_skipped_idempotent",
                 audio_id=str(audio_id),

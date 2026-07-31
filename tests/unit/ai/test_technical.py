@@ -19,7 +19,7 @@ from app.ai.technical.factory import build_technical_service
 from app.ai.technical.overlap import SignalBasedOverlapDetector
 from app.ai.technical.pipeline import TechnicalPipeline, technical_storage_key
 from app.ai.technical.quality import AudioQualityAnalyzer
-from app.ai.technical.schemas import TECHNICAL_VERSION, TechnicalResult
+from app.ai.technical.schemas import TECHNICAL_VERSION
 from app.ai.technical.service import TechnicalService
 from app.ai.technical.silence import LongSilenceDetector
 from app.audio.analysis.schemas import (
@@ -55,7 +55,10 @@ def _features(**overrides: Any) -> SignalFeatures:
 
 def _vad(**overrides: Any) -> VADResult:
     defaults: dict[str, Any] = dict(
-        speech_segments=[TimeSegment(start=0.0, end=4.0), TimeSegment(start=5.0, end=9.0)],
+        speech_segments=[
+            TimeSegment(start=0.0, end=4.0),
+            TimeSegment(start=5.0, end=9.0),
+        ],
         silence_segments=[TimeSegment(start=4.0, end=5.0)],
         speech_duration=8.0,
         speech_ratio=0.8,
@@ -73,7 +76,9 @@ def _artifact(audio_id: Any, batch_id: Any, **kw: Any) -> AnalysisArtifact:
         batch_id=str(batch_id),
         sample_rate=16000,
         vad=_vad(**{k[4:]: v for k, v in kw.items() if k.startswith("vad_")}),
-        features=_features(**{k[9:]: v for k, v in kw.items() if k.startswith("features_")}),
+        features=_features(
+            **{k[9:]: v for k, v in kw.items() if k.startswith("features_")}
+        ),
     )
 
 
@@ -97,7 +102,7 @@ class FakeStorage:
             raise FileNotFoundError(key)
         return self.objects[key]
 
-    async def get_signed_url(self, key: str, expires_in: int = 3600) -> str:
+    async def generate_signed_url(self, key: str, expires_in: int = 3600) -> str:
         return f"https://example.test/{key}"
 
     async def health_check(self) -> bool:
@@ -163,7 +168,9 @@ def test_long_silence_by_silence_ratio() -> None:
         speech_end=2.0,
     )
     detector = LongSilenceDetector(
-        _settings(long_silence_seconds=99.0, total_silence_ratio=0.5, min_speech_ratio=0.1)
+        _settings(
+            long_silence_seconds=99.0, total_silence_ratio=0.5, min_speech_ratio=0.1
+        )
     )
     present, _ = detector.detect(vad)
     assert present is True
@@ -211,7 +218,9 @@ def test_quality_slightly_impaired() -> None:
 def test_overlap_detected_high_density() -> None:
     segments = [TimeSegment(start=float(i), end=float(i) + 0.2) for i in range(0, 10)]
     vad = _vad(speech_segments=segments, speech_duration=2.0, speech_ratio=0.2)
-    features = _features(zero_crossing_rate=0.18, spectral_bandwidth=4600.0, spectral_centroid=3200.0)
+    features = _features(
+        zero_crossing_rate=0.18, spectral_bandwidth=4600.0, spectral_centroid=3200.0
+    )
     detector = SignalBasedOverlapDetector(_settings(overlap_threshold=0.5))
     present, score, _ = detector.detect(features, vad)
     assert present is True
@@ -329,6 +338,8 @@ async def test_service_get_technical_not_found() -> None:
 def test_factory_builds_service(monkeypatch: pytest.MonkeyPatch) -> None:
     from app.ai.technical import factory
 
-    monkeypatch.setattr(factory, "CloudflareR2Storage", lambda *args, **kwargs: FakeStorage())
+    monkeypatch.setattr(
+        factory, "CloudflareR2Storage", lambda *args, **kwargs: FakeStorage()
+    )
     service = build_technical_service(session=None)  # type: ignore[arg-type]
     assert isinstance(service, TechnicalService)

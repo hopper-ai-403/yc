@@ -28,7 +28,9 @@ def upgrade() -> None:
     )
     op.add_column(
         "predictions",
-        sa.Column("prediction_json", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column(
+            "prediction_json", postgresql.JSONB(astext_type=sa.Text()), nullable=True
+        ),
     )
     op.add_column(
         "predictions",

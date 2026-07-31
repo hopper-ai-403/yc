@@ -9,14 +9,14 @@ from app.audio.analysis.exceptions import AnalysisNotFoundException
 from app.audio.preprocessing.exceptions import AudioAssetNotFoundException
 from app.audio.repository import AudioRepository
 from app.audio.schemas import (
+    AudioAcousticRead,
     AudioAnalysisRead,
     AudioAssetRead,
     AudioDownloadData,
     AudioMetadataRead,
     AudioSegmentsRead,
-    AudioTechnicalRead,
-    AudioAcousticRead,
     AudioSpeechRead,
+    AudioTechnicalRead,
 )
 from app.config.settings import R2Settings
 from app.shared.storage.provider import StorageProvider
@@ -117,7 +117,9 @@ class AudioQueryService:
         return AudioTechnicalRead(
             audio_id=asset.id,
             audio_quality=str(payload.get("audio_quality") or "CLEAR"),
-            speaker_overlap_present=bool(payload.get("speaker_overlap_present") or False),
+            speaker_overlap_present=bool(
+                payload.get("speaker_overlap_present") or False
+            ),
             long_silence_present=bool(payload.get("long_silence_present") or False),
             technical_version=asset.technical_version,
             technical_completed=asset.technical_completed,
@@ -131,9 +133,13 @@ class AudioQueryService:
         payload = dict(asset.acoustic_json or {})
         return AudioAcousticRead(
             audio_id=asset.id,
-            background_noise_present=bool(payload.get("background_noise_present") or False),
+            background_noise_present=bool(
+                payload.get("background_noise_present") or False
+            ),
             background_noise_type=str(payload.get("background_noise_type") or "NONE"),
-            background_noise_severity=str(payload.get("background_noise_severity") or "NONE"),
+            background_noise_severity=str(
+                payload.get("background_noise_severity") or "NONE"
+            ),
             acoustic_version=asset.acoustic_version,
             acoustic_completed=asset.acoustic_completed,
         )

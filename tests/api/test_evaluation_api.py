@@ -16,7 +16,6 @@ from fastapi.testclient import TestClient
 from app.evaluation.dependencies import get_evaluation_service
 from app.evaluation.exceptions import (
     BatchNotFoundForEvaluationException,
-    BatchNotRunnableException,
     ExportNotFoundException,
 )
 from app.evaluation.schemas import (
@@ -78,15 +77,17 @@ def api_client() -> Any:
 
     service = AsyncMock()
     service.run_batch = AsyncMock(
-        side_effect=lambda bid: BatchRunRead(
-            batch_id=bid,
-            job_id=job_id,
-            status="QUEUED",
-            queued=True,
-            already_running=False,
+        side_effect=lambda bid: (
+            BatchRunRead(
+                batch_id=bid,
+                job_id=job_id,
+                status="QUEUED",
+                queued=True,
+                already_running=False,
+            )
+            if bid == batch_id
+            else (_raise(BatchNotFoundForEvaluationException(bid)))
         )
-        if bid == batch_id
-        else (_raise(BatchNotFoundForEvaluationException(bid)))
     )
     service.get_status = AsyncMock(
         return_value=BatchStatusRead(
@@ -121,25 +122,27 @@ def api_client() -> Any:
         )
     )
     service.get_exports = AsyncMock(
-        side_effect=lambda bid: BatchExportsRead(
-            batch_id=bid,
-            exports=[
-                BatchExportItem(
-                    name="results.csv",
-                    storage_key=f"uploads/{bid}/exports/results.csv",
-                    url="https://signed.example.test/results.csv?exp=3600",
-                    expires_in=3600,
-                ),
-                BatchExportItem(
-                    name="results.json",
-                    storage_key=f"uploads/{bid}/exports/results.json",
-                    url="https://signed.example.test/results.json?exp=3600",
-                    expires_in=3600,
-                ),
-            ],
+        side_effect=lambda bid: (
+            BatchExportsRead(
+                batch_id=bid,
+                exports=[
+                    BatchExportItem(
+                        name="results.csv",
+                        storage_key=f"uploads/{bid}/exports/results.csv",
+                        url="https://signed.example.test/results.csv?exp=3600",
+                        expires_in=3600,
+                    ),
+                    BatchExportItem(
+                        name="results.json",
+                        storage_key=f"uploads/{bid}/exports/results.json",
+                        url="https://signed.example.test/results.json?exp=3600",
+                        expires_in=3600,
+                    ),
+                ],
+            )
+            if bid == batch_id
+            else (_raise(ExportNotFoundException(bid)))
         )
-        if bid == batch_id
-        else (_raise(ExportNotFoundException(bid)))
     )
 
     application.dependency_overrides[get_evaluation_service] = lambda: service
@@ -238,7 +241,9 @@ def test_exports_signed_urls(api_client: Any) -> None:
     assert response.status_code == 200
     exports = response.json()["data"]["exports"]
     assert {item["name"] for item in exports} == {"results.csv", "results.json"}
-    assert all(item["url"].startswith("https://signed.example.test/") for item in exports)
+    assert all(
+        item["url"].startswith("https://signed.example.test/") for item in exports
+    )
 
 
 def test_exports_not_found(api_client: Any) -> None:

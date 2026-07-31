@@ -153,7 +153,9 @@ def api_client(audio_read: AudioAssetRead) -> TestClient:
     get_settings.cache_clear()
 
 
-def test_get_audio_metadata_download(api_client: TestClient, audio_read: AudioAssetRead) -> None:
+def test_get_audio_metadata_download(
+    api_client: TestClient, audio_read: AudioAssetRead
+) -> None:
     detail = api_client.get(f"/api/v1/audio/{audio_read.id}")
     assert detail.status_code == 200
     assert detail.json()["data"]["is_preprocessed"] is True
@@ -167,7 +169,9 @@ def test_get_audio_metadata_download(api_client: TestClient, audio_read: AudioAs
     assert download.json()["data"]["content_variant"] == "normalized"
 
 
-def test_get_analysis_and_segments(api_client: TestClient, audio_read: AudioAssetRead) -> None:
+def test_get_analysis_and_segments(
+    api_client: TestClient, audio_read: AudioAssetRead
+) -> None:
     analysis = api_client.get(f"/api/v1/audio/{audio_read.id}/analysis")
     assert analysis.status_code == 200
     body = analysis.json()["data"]

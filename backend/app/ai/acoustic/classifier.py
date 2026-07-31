@@ -22,6 +22,7 @@ class NoiseClassifier(Protocol):
         vad: VADResult,
     ) -> tuple[NoiseType, dict[str, float]]:
         """Return (noise_type, details). Called only when noise is present."""
+        ...
 
 
 class HeuristicNoiseClassifier:

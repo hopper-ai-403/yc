@@ -52,7 +52,11 @@ class BatchExporter:
         csv_key = exports_csv_key(batch_id)
         json_key = exports_json_key(batch_id)
 
-        if not regenerate and await self._exists(csv_key) and await self._exists(json_key):
+        if (
+            not regenerate
+            and await self._exists(csv_key)
+            and await self._exists(json_key)
+        ):
             logger.info(
                 "batch_exports_skipped_idempotent",
                 batch_id=str(batch_id),
@@ -99,7 +103,7 @@ class BatchExporter:
                 {
                     "name": name,
                     "storage_key": key,
-                    "url": await self._storage.get_signed_url(
+                    "url": await self._storage.generate_signed_url(
                         key,
                         expires_in=self._expiry,
                     ),

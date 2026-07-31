@@ -9,6 +9,7 @@ from uuid import uuid4
 
 import pytest
 
+import app.shared.database.models_registry  # noqa: F401
 from app.audio.models import AudioAsset
 from app.audio.preprocessing.metadata import (
     AudioTechnicalMetadata,
@@ -25,8 +26,6 @@ from app.audio.preprocessing.service import PreprocessingService
 from app.audio.preprocessing.validator import AudioValidator
 from app.config.settings import PreprocessingSettings
 from app.shared.domain.enums import AudioStatus
-
-import app.shared.database.models_registry  # noqa: F401
 
 
 class FakeStorage:
@@ -72,7 +71,9 @@ class FakeStorage:
 
 
 class FakeProbe:
-    def __init__(self, *, sample_rate: str = "44100", channels: int = 2, codec: str = "pcm_s16le") -> None:
+    def __init__(
+        self, *, sample_rate: str = "44100", channels: int = 2, codec: str = "pcm_s16le"
+    ) -> None:
         self.sample_rate = sample_rate
         self.channels = channels
         self.codec = codec
@@ -151,13 +152,17 @@ class FakeAssets:
         self.asset.processing_status = status
         return self.asset
 
-    async def save_preprocessing_result(self, asset_id: Any, **kwargs: Any) -> AudioAsset:
+    async def save_preprocessing_result(
+        self, asset_id: Any, **kwargs: Any
+    ) -> AudioAsset:
         self.asset.duration = kwargs["duration"]
         self.asset.sample_rate = kwargs["sample_rate"]
         self.asset.channels = kwargs["channels"]
         self.asset.normalized_storage_key = kwargs["normalized_storage_key"]
         self.asset.metadata_json = dict(kwargs["metadata_json"])
-        self.asset.metadata_json["metadata_storage_key"] = kwargs["metadata_storage_key"]
+        self.asset.metadata_json["metadata_storage_key"] = kwargs[
+            "metadata_storage_key"
+        ]
         self.asset.is_preprocessed = True
         self.asset.preprocessed_at = kwargs["preprocessed_at"]
         return self.asset

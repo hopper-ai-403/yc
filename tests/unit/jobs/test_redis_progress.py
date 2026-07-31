@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -69,5 +68,5 @@ async def test_redis_progress_and_heartbeat_keys() -> None:
     assert progress is not None
     assert progress["progress_percentage"] == 50
     assert redis.ttls[f"job:{job_id}:heartbeat"] == 30
-    assert redis.ttls[f"worker:worker-a"] == 30
+    assert redis.ttls["worker:worker-a"] == 30
     assert redis.ttls[f"job:{job_id}:progress"] == 120

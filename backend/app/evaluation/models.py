@@ -22,9 +22,7 @@ class BatchMetrics(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     """Aggregated evaluation metrics for exactly one batch."""
 
     __tablename__ = "batch_metrics"
-    __table_args__ = (
-        UniqueConstraint("batch_id", name="uq_batch_metrics_batch_id"),
-    )
+    __table_args__ = (UniqueConstraint("batch_id", name="uq_batch_metrics_batch_id"),)
 
     batch_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
@@ -47,6 +45,7 @@ class BatchMetrics(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     min_processing_time_ms: Mapped[float | None] = mapped_column(Float, nullable=True)
     max_processing_time_ms: Mapped[float | None] = mapped_column(Float, nullable=True)
     average_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    batch_duration_ms: Mapped[float | None] = mapped_column(Float, nullable=True)
     computed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

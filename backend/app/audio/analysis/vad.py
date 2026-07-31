@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Protocol
+from typing import Any, Protocol
 
 import numpy as np
 
@@ -21,10 +21,11 @@ class VoiceActivityDetector(Protocol):
 
     def detect(self, waveform: np.ndarray, sample_rate: int) -> VADResult:
         """Detect speech activity in a mono waveform."""
+        ...
 
 
 @lru_cache(maxsize=1)
-def _load_silero_bundle() -> tuple[object, object]:
+def _load_silero_bundle() -> tuple[Any, Any]:
     """Load Silero VAD model and utilities (cached per process)."""
     try:
         import torch
@@ -146,7 +147,6 @@ class EnergyVAD:
         seg_start = 0.0
         for index, energy in enumerate(energies):
             t0 = index * hop / sample_rate
-            t1 = min(len(waveform) / sample_rate, t0 + frame / sample_rate)
             active = energy >= threshold
             if active and not in_speech:
                 in_speech = True

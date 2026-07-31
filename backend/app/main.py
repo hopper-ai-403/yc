@@ -82,6 +82,7 @@ def create_application() -> FastAPI:
     from app.evaluation.api import router as evaluation_router
     from app.jobs.api import router as jobs_router
     from app.prediction.api import router as prediction_router
+    from app.system.api import router as system_router
     from app.upload.api import router as upload_router
 
     application.include_router(upload_router)
@@ -89,6 +90,7 @@ def create_application() -> FastAPI:
     application.include_router(audio_router)
     application.include_router(prediction_router)
     application.include_router(evaluation_router)
+    application.include_router(system_router)
 
     return application
 

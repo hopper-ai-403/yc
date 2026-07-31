@@ -55,7 +55,10 @@ def _features(**overrides: Any) -> SignalFeatures:
 
 def _vad(**overrides: Any) -> VADResult:
     defaults: dict[str, Any] = dict(
-        speech_segments=[TimeSegment(start=0.0, end=4.0), TimeSegment(start=5.0, end=9.0)],
+        speech_segments=[
+            TimeSegment(start=0.0, end=4.0),
+            TimeSegment(start=5.0, end=9.0),
+        ],
         silence_segments=[TimeSegment(start=4.0, end=5.0)],
         speech_duration=8.0,
         speech_ratio=0.8,
@@ -73,7 +76,9 @@ def _artifact(audio_id: Any, batch_id: Any, **kw: Any) -> AnalysisArtifact:
         batch_id=str(batch_id),
         sample_rate=16000,
         vad=_vad(**{k[4:]: v for k, v in kw.items() if k.startswith("vad_")}),
-        features=_features(**{k[9:]: v for k, v in kw.items() if k.startswith("features_")}),
+        features=_features(
+            **{k[9:]: v for k, v in kw.items() if k.startswith("features_")}
+        ),
     )
 
 
@@ -106,7 +111,7 @@ class FakeStorage:
             raise FileNotFoundError(key)
         return self.objects[key]
 
-    async def get_signed_url(self, key: str, expires_in: int = 3600) -> str:
+    async def generate_signed_url(self, key: str, expires_in: int = 3600) -> str:
         return f"https://example.test/{key}"
 
     async def health_check(self) -> bool:
@@ -163,7 +168,9 @@ def test_noise_absent_clean_signal() -> None:
 
 def test_noise_present_low_snr() -> None:
     detector = SignalBasedNoiseDetector(_settings())
-    features = _features(snr_estimate=8.0, zero_crossing_rate=0.15, spectral_bandwidth=4500.0)
+    features = _features(
+        snr_estimate=8.0, zero_crossing_rate=0.15, spectral_bandwidth=4500.0
+    )
     present, score, _ = detector.detect(features, _vad())
     assert present is True
     assert score >= 0.5
@@ -210,13 +217,17 @@ def test_severity_low() -> None:
 
 def test_severity_medium() -> None:
     estimator = DeterministicSeverityEstimator(_settings())
-    severity, _ = estimator.estimate(_features(snr_estimate=14.0), _vad(speech_ratio=0.6), 0.7)
+    severity, _ = estimator.estimate(
+        _features(snr_estimate=14.0), _vad(speech_ratio=0.6), 0.7
+    )
     assert severity is NoiseSeverity.MEDIUM
 
 
 def test_severity_high() -> None:
     estimator = DeterministicSeverityEstimator(_settings())
-    severity, _ = estimator.estimate(_features(snr_estimate=3.0), _vad(speech_ratio=0.3), 0.9)
+    severity, _ = estimator.estimate(
+        _features(snr_estimate=3.0), _vad(speech_ratio=0.3), 0.9
+    )
     assert severity is NoiseSeverity.HIGH
 
 
@@ -317,6 +328,8 @@ async def test_service_get_acoustic_not_found() -> None:
 def test_factory_builds_service(monkeypatch: pytest.MonkeyPatch) -> None:
     from app.ai.acoustic import factory
 
-    monkeypatch.setattr(factory, "CloudflareR2Storage", lambda *args, **kwargs: FakeStorage())
+    monkeypatch.setattr(
+        factory, "CloudflareR2Storage", lambda *args, **kwargs: FakeStorage()
+    )
     service = build_acoustic_service(session=None)  # type: ignore[arg-type]
     assert isinstance(service, AcousticService)

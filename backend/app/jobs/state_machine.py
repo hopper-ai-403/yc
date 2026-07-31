@@ -17,7 +17,11 @@ JOB_TRANSITIONS: dict[JobStatus, set[JobStatus]] = {
 }
 
 AUDIO_TRANSITIONS: dict[AudioStatus, set[AudioStatus]] = {
-    AudioStatus.UPLOADED: {AudioStatus.VALIDATED, AudioStatus.QUEUED, AudioStatus.FAILED},
+    AudioStatus.UPLOADED: {
+        AudioStatus.VALIDATED,
+        AudioStatus.QUEUED,
+        AudioStatus.FAILED,
+    },
     AudioStatus.VALIDATED: {AudioStatus.QUEUED, AudioStatus.FAILED},
     AudioStatus.QUEUED: {AudioStatus.PROCESSING, AudioStatus.FAILED},
     AudioStatus.PROCESSING: {

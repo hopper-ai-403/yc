@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from typing import Protocol
 
+from app.ai.technical.schemas import TechnicalResult
 from app.config.settings import PredictionSettings
 from app.prediction.schemas import (
     AnalysisResult,
     ConfidenceBreakdown,
 )
-from app.ai.technical.schemas import TechnicalResult
 from app.shared.logging.setup import get_logger
 
 logger = get_logger(__name__)
@@ -20,6 +20,7 @@ class ConfidenceEstimator(Protocol):
 
     def estimate(self, analysis: AnalysisResult) -> ConfidenceBreakdown:
         """Return overall confidence plus per-engine breakdown."""
+        ...
 
 
 class WeightedConfidenceEstimator:
@@ -79,7 +80,9 @@ class WeightedConfidenceEstimator:
         quality = technical.quality_score / 100.0
         overlap = 1.0 - technical.overlap_score
         silence = self._silence_score(technical)
-        total = sub.get("quality", 0.0) + sub.get("overlap", 0.0) + sub.get("silence", 0.0)
+        total = (
+            sub.get("quality", 0.0) + sub.get("overlap", 0.0) + sub.get("silence", 0.0)
+        )
         if total <= 0:
             return 0.0
         return (

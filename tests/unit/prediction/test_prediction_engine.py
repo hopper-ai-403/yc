@@ -27,7 +27,11 @@ from app.prediction.exceptions import (
 from app.prediction.export import PredictionExportService
 from app.prediction.factory import build_prediction_service
 from app.prediction.pipeline import PredictionPipeline, prediction_storage_key
-from app.prediction.schemas import ASSESSMENT_FIELDS, AnalysisResult, AssessmentPrediction
+from app.prediction.schemas import (
+    ASSESSMENT_FIELDS,
+    AnalysisResult,
+    AssessmentPrediction,
+)
 from app.prediction.service import PredictionService
 from app.prediction.validator import PredictionValidator
 from app.shared.domain.enums import (
@@ -115,7 +119,7 @@ class FakeStorage:
             raise FileNotFoundError(key)
         return self.objects[key]
 
-    async def get_signed_url(self, key: str, expires_in: int = 3600) -> str:
+    async def generate_signed_url(self, key: str, expires_in: int = 3600) -> str:
         return f"https://example.test/{key}"
 
     async def health_check(self) -> bool:
@@ -257,7 +261,9 @@ def test_validator_enforces_noise_business_rule() -> None:
 
 
 def test_validator_confidence_bounds() -> None:
-    with pytest.raises(Exception):
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
         AssessmentPrediction(
             emotional_tone=EmotionTone.NEUTRAL,
             emotional_intensity=EmotionIntensity.LOW,
@@ -474,7 +480,9 @@ async def test_export_csv_and_json_public_fields_only() -> None:
 def test_factory_builds_service(monkeypatch: pytest.MonkeyPatch) -> None:
     from app.prediction import factory
 
-    monkeypatch.setattr(factory, "CloudflareR2Storage", lambda *args, **kwargs: FakeStorage())
+    monkeypatch.setattr(
+        factory, "CloudflareR2Storage", lambda *args, **kwargs: FakeStorage()
+    )
     service = build_prediction_service(session=None)  # type: ignore[arg-type]
     assert isinstance(service, PredictionService)
 
@@ -491,7 +499,7 @@ def test_validator_raises_on_out_of_bounds_via_construct() -> None:
         background_noise_severity = NoiseSeverity.LOW
         confidence = 1.5
 
-        def model_copy(self, update: dict[str, Any]) -> "LoosePrediction":
+        def model_copy(self, update: dict[str, Any]) -> LoosePrediction:
             return self
 
     with pytest.raises(PredictionValidationFailedException):

@@ -19,7 +19,9 @@ class LongSilenceDetector:
         """Return (present, details) for long silence."""
         silence_duration = sum(s.duration for s in vad.silence_segments)
         total_duration = vad.speech_duration + silence_duration
-        silence_ratio = (silence_duration / total_duration) if total_duration > 0 else 0.0
+        silence_ratio = (
+            (silence_duration / total_duration) if total_duration > 0 else 0.0
+        )
 
         present = (
             vad.largest_silence >= self._settings.long_silence_seconds

@@ -8,14 +8,13 @@ from uuid import uuid4
 
 import pytest
 
+import app.shared.database.models_registry  # noqa: F401
 from app.audio.models import AudioAsset, AudioBatch
 from app.config.settings import JobSettings
 from app.jobs.exceptions import JobRetryExhaustedException, JobStateException
 from app.jobs.models import Job
 from app.jobs.service import JobService
 from app.shared.domain.enums import AudioStatus, BatchStatus, JobStatus
-
-import app.shared.database.models_registry  # noqa: F401
 
 
 class FakeJobs:
@@ -108,7 +107,9 @@ class FakeCache:
     async def set_job_heartbeat(self, job_id: Any, worker_id: str) -> None:
         self.heartbeats[str(job_id)] = worker_id
 
-    async def set_worker_heartbeat(self, hostname: str, payload: dict[str, Any]) -> None:
+    async def set_worker_heartbeat(
+        self, hostname: str, payload: dict[str, Any]
+    ) -> None:
         return None
 
     async def clear_job(self, job_id: Any) -> None:
@@ -124,7 +125,9 @@ class FakeDispatcher:
         return f"task-{len(self.calls)}"
 
 
-def _make_asset(batch_id: Any, status: AudioStatus = AudioStatus.UPLOADED) -> AudioAsset:
+def _make_asset(
+    batch_id: Any, status: AudioStatus = AudioStatus.UPLOADED
+) -> AudioAsset:
     asset = AudioAsset(
         batch_id=batch_id,
         filename="a.wav",
@@ -196,7 +199,9 @@ async def test_queue_job_and_progress_cache() -> None:
     assert queued.status is JobStatus.QUEUED
     assert len(dispatcher.calls) == 1
     assert cache.status[str(job.id)] == JobStatus.QUEUED.value
-    assert all(a.processing_status is AudioStatus.QUEUED for a in assets.assets.values())
+    assert all(
+        a.processing_status is AudioStatus.QUEUED for a in assets.assets.values()
+    )
 
 
 @pytest.mark.asyncio
@@ -235,10 +240,14 @@ async def test_retry_failed_assets_only_with_backoff() -> None:
         retry_count=0,
     )
     completed_id = next(
-        a.id for a in assets.assets.values() if a.processing_status is AudioStatus.COMPLETED
+        a.id
+        for a in assets.assets.values()
+        if a.processing_status is AudioStatus.COMPLETED
     )
     failed_id = next(
-        a.id for a in assets.assets.values() if a.processing_status is AudioStatus.FAILED
+        a.id
+        for a in assets.assets.values()
+        if a.processing_status is AudioStatus.FAILED
     )
 
     retried = await service.retry_job(job.id)

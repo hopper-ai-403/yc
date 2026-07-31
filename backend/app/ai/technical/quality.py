@@ -89,7 +89,9 @@ class AudioQualityAnalyzer:
         if features.peak_amplitude < _CLIP_THRESHOLD:
             return 0.0
         # Estimation: very hot peaks combined with compressed dynamics.
-        compression = max(0.0, self._settings.dynamic_range_good_db - features.dynamic_range)
+        compression = max(
+            0.0, self._settings.dynamic_range_good_db - features.dynamic_range
+        )
         ratio = min(1.0, compression / max(self._settings.dynamic_range_good_db, 1e-6))
         return float(self._settings.clipping_penalty_weight * ratio)
 
@@ -98,7 +100,9 @@ class AudioQualityAnalyzer:
             return 0.0
         if dynamic_range_db <= self._settings.dynamic_range_bad_db:
             return self._settings.dynamic_range_penalty_weight
-        span = self._settings.dynamic_range_good_db - self._settings.dynamic_range_bad_db
+        span = (
+            self._settings.dynamic_range_good_db - self._settings.dynamic_range_bad_db
+        )
         return float(
             (self._settings.dynamic_range_good_db - dynamic_range_db)
             / max(span, 1e-6)

@@ -22,6 +22,7 @@ class NoiseSeverityEstimator(Protocol):
         noise_score: float,
     ) -> tuple[NoiseSeverity, dict[str, float]]:
         """Return (severity, details). Called only when noise is present."""
+        ...
 
 
 class DeterministicSeverityEstimator:

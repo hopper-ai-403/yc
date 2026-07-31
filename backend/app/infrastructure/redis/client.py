@@ -30,7 +30,7 @@ class RedisClient:
         if self._client is not None:
             close = getattr(self._client, "aclose", None)
             if close is None:
-                close = getattr(self._client, "close")
+                close = self._client.close
             result = close()
             if hasattr(result, "__await__"):
                 await result  # type: ignore[misc]

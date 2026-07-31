@@ -3,7 +3,11 @@
 from typing import Any
 from uuid import UUID
 
-from app.shared.exceptions.base import AppException, StorageException, ValidationException
+from app.shared.exceptions.base import (
+    AppException,
+    StorageException,
+    ValidationException,
+)
 
 
 class PreprocessingException(AppException):

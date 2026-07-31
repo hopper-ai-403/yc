@@ -10,9 +10,9 @@ Extension points: ConfidenceEstimator implementations swapped via factory.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Any
 from uuid import UUID
 
-from app.audio.models import AudioAsset
 from app.audio.preprocessing.exceptions import AudioAssetNotFoundException
 from app.audio.repository import AudioRepository
 from app.config.settings import PredictionSettings
@@ -47,6 +47,7 @@ class PredictionService:
         audio_id: UUID,
         *,
         regenerate: bool = False,
+        profile: dict[str, Any] | None = None,
     ) -> AssessmentPrediction:
         asset = await self._assets.find_by_id(audio_id)
         if asset is None:
@@ -61,14 +62,18 @@ class PredictionService:
             )
             return self._to_assessment(existing)
 
-        prediction, breakdown, internal = await self._pipeline.run(asset)
+        prediction, breakdown, internal = await self._pipeline.run(
+            asset,
+            profile=profile,
+        )
+        internal_dict = internal.to_storage_dict() if internal is not None else None
+        if internal_dict is not None and profile is not None:
+            internal_dict["profile"] = profile
         await self._predictions.save_engine_result(
             audio_id,
             prediction_version=self._settings.prediction_version,
             prediction_json=prediction.to_public_dict(),
-            internal_prediction_json=(
-                internal.to_storage_dict() if internal is not None else None
-            ),
+            internal_prediction_json=internal_dict,
             confidence_breakdown=breakdown.to_dict(),
             prediction_completed_at=datetime.now(timezone.utc),
             regenerate=regenerate,

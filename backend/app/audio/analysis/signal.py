@@ -9,7 +9,9 @@ import numpy as np
 from app.audio.analysis.exceptions import InvalidWaveformException
 
 
-def load_waveform(data: bytes, *, expected_sample_rate: int | None = None) -> tuple[np.ndarray, int]:
+def load_waveform(
+    data: bytes, *, expected_sample_rate: int | None = None
+) -> tuple[np.ndarray, int]:
     """Load mono float32 waveform from WAV bytes."""
     if not data:
         raise InvalidWaveformException("Empty audio payload")
@@ -54,7 +56,9 @@ def load_waveform(data: bytes, *, expected_sample_rate: int | None = None) -> tu
     return mono, int(sample_rate)
 
 
-def frame_rms(waveform: np.ndarray, *, frame_length: int, hop_length: int) -> np.ndarray:
+def frame_rms(
+    waveform: np.ndarray, *, frame_length: int, hop_length: int
+) -> np.ndarray:
     """Compute per-frame RMS energy."""
     if waveform.size == 0:
         return np.zeros(0, dtype=np.float32)
@@ -62,5 +66,7 @@ def frame_rms(waveform: np.ndarray, *, frame_length: int, hop_length: int) -> np
         raise InvalidWaveformException("Invalid framing parameters")
 
     padded = np.pad(waveform, (0, max(0, frame_length - 1)), mode="constant")
-    frames = np.lib.stride_tricks.sliding_window_view(padded, frame_length)[::hop_length]
+    frames = np.lib.stride_tricks.sliding_window_view(padded, frame_length)[
+        ::hop_length
+    ]
     return np.sqrt(np.mean(np.square(frames), axis=1)).astype(np.float32)

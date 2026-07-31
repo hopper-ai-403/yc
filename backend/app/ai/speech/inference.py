@@ -23,7 +23,7 @@ _registry: dict[str, SpeechEmotionModel] = {}
 def get_or_load_model(
     settings: SpeechSettings,
     *,
-    model_factory: "type[SpeechEmotionModel] | None" = None,
+    model_factory: type[SpeechEmotionModel] | None = None,
 ) -> SpeechEmotionModel:
     """Return the process-wide singleton model, loading it once."""
     key = settings.model_name

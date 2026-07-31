@@ -23,9 +23,9 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(_REPO_ROOT / ".env")
 load_dotenv(Path.cwd() / ".env", override=False)
 
+import app.shared.database.models_registry  # noqa: E402, F401
 from app.config.settings import get_settings  # noqa: E402
 from app.shared.database.base import Base  # noqa: E402
-import app.shared.database.models_registry  # noqa: E402, F401
 
 config = context.config
 settings = get_settings()

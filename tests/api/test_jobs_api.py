@@ -9,10 +9,9 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
+import app.shared.database.models_registry  # noqa: F401
 from app.jobs.schemas import JobProgressData, JobRead
 from app.shared.domain.enums import JobStatus
-
-import app.shared.database.models_registry  # noqa: F401
 
 
 @pytest.fixture

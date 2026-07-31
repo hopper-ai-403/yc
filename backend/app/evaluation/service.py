@@ -158,5 +158,6 @@ class EvaluationService:
             min_processing_time_ms=metrics.min_processing_time_ms,
             max_processing_time_ms=metrics.max_processing_time_ms,
             average_confidence=metrics.average_confidence,
+            batch_duration_ms=metrics.batch_duration_ms,
             computed_at=metrics.computed_at,
         )

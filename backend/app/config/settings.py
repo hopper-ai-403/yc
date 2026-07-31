@@ -118,6 +118,12 @@ class R2Settings(BaseSettings):
     endpoint_url: str = ""
     region: str = "auto"
     signed_url_expiry_seconds: int = 3600
+    retry_count: int = 3
+    backoff_base_seconds: float = 0.5
+    backoff_max_seconds: float = 8.0
+    connect_timeout_seconds: int = 10
+    read_timeout_seconds: int = 60
+    streaming_chunk_size: int = 1024 * 1024
 
 
 class UploadSettings(BaseSettings):
@@ -414,7 +420,9 @@ class PredictionSettings(BaseSettings):
         }
     )
 
-    @field_validator("confidence_weights", "confidence_technical_weights", mode="before")
+    @field_validator(
+        "confidence_weights", "confidence_technical_weights", mode="before"
+    )
     @classmethod
     def parse_weight_dict(cls, value: object) -> object:
         if isinstance(value, str):
@@ -422,6 +430,22 @@ class PredictionSettings(BaseSettings):
 
             return json.loads(value)
         return value
+
+
+class PerformanceSettings(BaseSettings):
+    """Performance and operational readiness knobs."""
+
+    model_config = SettingsConfigDict(env_prefix="PERFORMANCE_", extra="ignore")
+
+    worker_concurrency: int = 4
+    batch_size: int = 10
+    prefetch_multiplier: int = 1
+    model_warmup: bool = True
+    pipeline_profiling: bool = True
+    r2_retry_count: int = 3
+    task_timeout: int = 900
+    stale_worker_multiplier: float = 3.0
+    orphaned_job_threshold_seconds: int = 1800
 
 
 class Settings(BaseSettings):
@@ -449,6 +473,7 @@ class Settings(BaseSettings):
     acoustic: AcousticSettings = Field(default_factory=AcousticSettings)
     speech: SpeechSettings = Field(default_factory=SpeechSettings)
     prediction: PredictionSettings = Field(default_factory=PredictionSettings)
+    performance: PerformanceSettings = Field(default_factory=PerformanceSettings)
 
 
 @lru_cache

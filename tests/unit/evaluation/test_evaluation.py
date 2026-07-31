@@ -45,7 +45,7 @@ class FakeStorage:
             raise FileNotFoundError(key)
         return self.objects[key]
 
-    async def get_signed_url(self, key: str, expires_in: int = 3600) -> str:
+    async def generate_signed_url(self, key: str, expires_in: int = 3600) -> str:
         return f"https://signed.example.test/{key}?exp={expires_in}"
 
     async def health_check(self) -> bool:
@@ -405,7 +405,9 @@ async def test_signed_exports_and_missing() -> None:
     assert len(items) == 2
     names = {item["name"] for item in items}
     assert names == {"results.csv", "results.json"}
-    assert all(str(item["url"]).startswith("https://signed.example.test/") for item in items)
+    assert all(
+        str(item["url"]).startswith("https://signed.example.test/") for item in items
+    )
 
 
 # --- CSV / JSON export content -------------------------------------------
@@ -456,7 +458,9 @@ async def test_csv_export_exact_shape() -> None:
 def test_factory_builds_service(monkeypatch: pytest.MonkeyPatch) -> None:
     from app.evaluation import factory
 
-    monkeypatch.setattr(factory, "CloudflareR2Storage", lambda *args, **kwargs: FakeStorage())
+    monkeypatch.setattr(
+        factory, "CloudflareR2Storage", lambda *args, **kwargs: FakeStorage()
+    )
     monkeypatch.setattr(factory, "build_job_service", lambda session: None)
     service = build_evaluation_service(session=None)  # type: ignore[arg-type]
     assert isinstance(service, EvaluationService)

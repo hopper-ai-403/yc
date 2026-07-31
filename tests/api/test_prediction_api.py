@@ -12,7 +12,7 @@ from app.prediction.dependencies import (
     get_prediction_export_service,
     get_prediction_service,
 )
-from app.prediction.schemas import PredictionListRead, PredictionRead
+from app.prediction.schemas import PredictionRead
 
 PUBLIC_PREDICTION = {
     "emotional_tone": "NEUTRAL",
@@ -107,7 +107,9 @@ def test_get_batch_predictions(api_client: TestClient) -> None:
     assert response.status_code == 200
     data = response.json()["data"]
     assert data["count"] == 1
-    assert set(data["predictions"][0]["prediction"].keys()) == set(PUBLIC_PREDICTION.keys())
+    assert set(data["predictions"][0]["prediction"].keys()) == set(
+        PUBLIC_PREDICTION.keys()
+    )
 
 
 def test_get_job_predictions(api_client: TestClient) -> None:

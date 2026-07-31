@@ -45,6 +45,9 @@ tmp/
 temp/
 /data/
 
+# Release artifacts (regenerate via scripts/generate_release_artifacts.py)
+/release/
+
 # Secrets / credentials
 credentials.json
 *.pem

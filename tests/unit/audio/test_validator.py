@@ -5,7 +5,11 @@ from pathlib import Path
 import pytest
 
 from app.audio.preprocessing.exceptions import AudioValidationException
-from app.audio.preprocessing.metadata import AudioTechnicalMetadata, ProbeResult, ProbeStream
+from app.audio.preprocessing.metadata import (
+    AudioTechnicalMetadata,
+    ProbeResult,
+    ProbeStream,
+)
 from app.audio.preprocessing.validator import AudioValidator
 from app.config.settings import PreprocessingSettings
 

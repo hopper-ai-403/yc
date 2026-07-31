@@ -37,7 +37,9 @@ def upgrade() -> None:
     )
     op.add_column(
         "audio_assets",
-        sa.Column("acoustic_json", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column(
+            "acoustic_json", postgresql.JSONB(astext_type=sa.Text()), nullable=True
+        ),
     )
 
 

@@ -11,6 +11,7 @@ class JobDispatcher(Protocol):
 
     def enqueue_batch(self, job_id: UUID, *, countdown: int = 0) -> str:
         """Queue process_batch for a job. Returns Celery task id."""
+        ...
 
 
 class CeleryJobDispatcher:
@@ -19,7 +20,7 @@ class CeleryJobDispatcher:
     def enqueue_batch(self, job_id: UUID, *, countdown: int = 0) -> str:
         from app.infrastructure.celery.tasks import process_batch
 
-        async_result = process_batch.apply_async(
+        async_result = process_batch.apply_async(  # type: ignore[attr-defined]
             args=[str(job_id)],
             countdown=max(0, countdown),
         )

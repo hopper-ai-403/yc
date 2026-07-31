@@ -38,7 +38,9 @@ def upgrade() -> None:
     )
     op.add_column(
         "audio_assets",
-        sa.Column("metadata_json", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column(
+            "metadata_json", postgresql.JSONB(astext_type=sa.Text()), nullable=True
+        ),
     )
     op.create_index(
         "ix_audio_assets_is_preprocessed",

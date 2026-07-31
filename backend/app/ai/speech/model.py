@@ -55,12 +55,15 @@ class SpeechEmotionModel(Protocol):
 
     def load(self) -> None:
         """Load model weights. Called once per worker process."""
+        ...
 
     def predict(self, waveform: np.ndarray, sample_rate: int) -> ModelPrediction:
         """Run inference over a mono float32 waveform."""
+        ...
 
     def metadata(self) -> ModelMetadata:
         """Return model metadata."""
+        ...
 
 
 class HuggingFaceSpeechEmotionModel:
@@ -78,7 +81,9 @@ class HuggingFaceSpeechEmotionModel:
         if self._pipeline is not None:
             return
         try:
-            from transformers import pipeline as hf_pipeline  # type: ignore[import-not-found]
+            from transformers import (
+                pipeline as hf_pipeline,  # type: ignore[import-not-found]
+            )
         except ImportError as exc:
             raise SpeechModelException(
                 "transformers is required for HuggingFaceSpeechEmotionModel",

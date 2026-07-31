@@ -70,14 +70,12 @@ def upgrade() -> None:
     )
 
     # Backfill total_files from related batches where possible.
-    op.execute(
-        """
+    op.execute("""
         UPDATE jobs AS j
         SET total_files = b.total_files
         FROM audio_batches AS b
         WHERE j.batch_id = b.id
-        """
-    )
+        """)
 
 
 def downgrade() -> None:

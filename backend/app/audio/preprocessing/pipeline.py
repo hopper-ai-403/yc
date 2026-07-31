@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import tempfile
 import time
@@ -129,7 +130,7 @@ class PreprocessingPipeline:
                     "error": str(exc),
                 },
             ) from exc
-        destination.write_bytes(data)
+        await asyncio.to_thread(destination.write_bytes, data)
         duration_ms = int((time.perf_counter() - started) * 1000)
         logger.info(
             "download_complete",
@@ -150,9 +151,10 @@ class PreprocessingPipeline:
         wav_key = normalized_storage_key(asset.batch_id, asset.id)
         meta_key = metadata_storage_key(asset.batch_id, asset.id)
         try:
+            normalized_bytes = await asyncio.to_thread(normalized_path.read_bytes)
             await self._storage.upload(
                 wav_key,
-                normalized_path.read_bytes(),
+                normalized_bytes,
                 content_type="audio/wav",
                 metadata={
                     "audio_id": str(asset.id),

@@ -303,9 +303,11 @@ class JobService:
         job = await self._require_job(job_id)
         assets = await self._assets.find_by_batch(job.batch_id)
         total = len(assets)
-        processed = sum(1 for a in assets if is_audio_terminal_success(a.processing_status))
+        processed = sum(
+            1 for a in assets if is_audio_terminal_success(a.processing_status)
+        )
         failed = sum(1 for a in assets if a.processing_status is AudioStatus.FAILED)
-        percentage = 0 if total == 0 else int(round((processed / total) * 100))
+        percentage = 0 if total == 0 else round((processed / total) * 100)
 
         job.total_files = total
         job.processed_files = processed
@@ -353,9 +355,9 @@ class JobService:
             )
         if asset.processing_status is new_status:
             return
-        if is_audio_terminal_success(asset.processing_status) and is_audio_terminal_success(
-            new_status
-        ):
+        if is_audio_terminal_success(
+            asset.processing_status
+        ) and is_audio_terminal_success(new_status):
             return
 
         validate_audio_transition(asset.processing_status, new_status)
@@ -411,6 +413,48 @@ class JobService:
                 recovered_assets=recovered,
             )
             await self.update_progress(job_id)
+        return recovered
+
+    async def recover_orphaned_jobs(self, *, threshold_seconds: int = 1800) -> int:
+        """Requeue RUNNING jobs whose worker died (no fresh heartbeat).
+
+        Recovery path: fail the orphaned job, reset stale PROCESSING assets,
+        then requeue. Returns the number of recovered jobs.
+        """
+        active = await self._jobs.find_active()
+        now = datetime.now(timezone.utc)
+        recovered = 0
+        for job in active:
+            if job.status is not JobStatus.RUNNING:
+                continue
+            if job.started_at is None:
+                continue
+            started = job.started_at
+            if started.tzinfo is None:
+                started = started.replace(tzinfo=timezone.utc)
+            if (now - started).total_seconds() < threshold_seconds:
+                continue
+            try:
+                fresh = await self._progress.has_fresh_job_heartbeat(job.id)
+            except Exception:
+                fresh = True  # Cache unavailable: do not recover blindly.
+            if fresh:
+                continue
+
+            validate_job_transition(job.status, JobStatus.FAILED)
+            job.status = JobStatus.FAILED
+            job.error_message = "Orphaned job recovered: worker heartbeat lost"
+            await self._jobs.save(job)
+
+            await self.recover_stale_processing(job.id)
+            await self.queue_job(job.id)
+            recovered += 1
+            logger.warning(
+                "orphaned_job_recovered",
+                job_id=str(job.id),
+                started_at=started.isoformat(),
+                status="requeued",
+            )
         return recovered
 
     async def _require_job(self, job_id: UUID) -> Job:

@@ -9,6 +9,8 @@ from uuid import uuid4
 import numpy as np
 import pytest
 
+import app.shared.database.models_registry  # noqa: F401
+from app.audio.analysis.exceptions import InvalidWaveformException
 from app.audio.analysis.features import FeatureExtractor
 from app.audio.analysis.pipeline import AnalysisPipeline, analysis_storage_key
 from app.audio.analysis.schemas import ANALYSIS_VERSION, AnalysisArtifact, TimeSegment
@@ -19,8 +21,6 @@ from app.audio.analysis.vad import EnergyVAD
 from app.audio.models import AudioAsset
 from app.config.settings import AnalysisSettings
 from app.shared.domain.enums import AudioStatus
-
-import app.shared.database.models_registry  # noqa: F401
 
 
 def test_speech_and_silence_segmentation() -> None:
@@ -71,7 +71,7 @@ def test_load_waveform_rejects_silent() -> None:
 
     buf = io.BytesIO()
     sf.write(buf, np.zeros(1600, dtype=np.float32), 16000, format="WAV")
-    with pytest.raises(Exception):
+    with pytest.raises(InvalidWaveformException):
         load_waveform(buf.getvalue(), expected_sample_rate=16000)
 
 
@@ -121,7 +121,9 @@ class FakeAssets:
         self.asset.processing_status = status
         return self.asset
 
-    async def save_preprocessing_result(self, asset_id: Any, **kwargs: Any) -> AudioAsset:
+    async def save_preprocessing_result(
+        self, asset_id: Any, **kwargs: Any
+    ) -> AudioAsset:
         return self.asset
 
     async def save_analysis_result(self, asset_id: Any, **kwargs: Any) -> AudioAsset:

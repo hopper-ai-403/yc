@@ -86,7 +86,7 @@ class FakeStorage:
             raise FileNotFoundError(key)
         return self.objects[key]
 
-    async def get_signed_url(self, key: str, expires_in: int = 3600) -> str:
+    async def generate_signed_url(self, key: str, expires_in: int = 3600) -> str:
         return f"https://example.test/{key}"
 
     async def health_check(self) -> bool:
@@ -173,7 +173,9 @@ def test_intensity_bands() -> None:
 
 
 def test_intensity_thresholds_configurable() -> None:
-    settings = _settings(intensity_medium_probability=0.9, intensity_high_probability=0.95)
+    settings = _settings(
+        intensity_medium_probability=0.9, intensity_high_probability=0.95
+    )
     assert map_intensity(0.62, settings) is EmotionIntensity.LOW
 
 
@@ -312,7 +314,9 @@ def test_factory_builds_service(monkeypatch: pytest.MonkeyPatch) -> None:
 
     reset_model_registry()
     MockSpeechEmotionModel.load_calls = 0
-    monkeypatch.setattr(factory, "CloudflareR2Storage", lambda *args, **kwargs: FakeStorage())
+    monkeypatch.setattr(
+        factory, "CloudflareR2Storage", lambda *args, **kwargs: FakeStorage()
+    )
     monkeypatch.setattr(
         factory,
         "get_or_load_model",

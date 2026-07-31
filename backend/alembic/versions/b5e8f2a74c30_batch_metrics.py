@@ -28,7 +28,9 @@ def upgrade() -> None:
             nullable=False,
             server_default="0",
         ),
-        sa.Column("failed_predictions", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column(
+            "failed_predictions", sa.Integer(), nullable=False, server_default="0"
+        ),
         sa.Column("success_rate", sa.Float(), nullable=False, server_default="0"),
         sa.Column("average_processing_time_ms", sa.Float(), nullable=True),
         sa.Column("min_processing_time_ms", sa.Float(), nullable=True),

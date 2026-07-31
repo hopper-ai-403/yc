@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import AsyncIterator
 from functools import partial
-from typing import Any, BinaryIO, cast
+from typing import Any, BinaryIO, Callable, cast
 
 from botocore.exceptions import BotoCoreError, ClientError
 
@@ -20,6 +21,8 @@ class CloudflareR2Storage(StorageProvider):
     """Cloudflare R2 implementation of StorageProvider.
 
     boto3 is imported only inside this infrastructure module.
+    Retries transient failures with exponential backoff, applies connect/read
+    timeouts, reuses a single boto3 client, and supports streaming I/O.
     """
 
     def __init__(self, settings: R2Settings) -> None:
@@ -49,6 +52,7 @@ class CloudflareR2Storage(StorageProvider):
 
         self._ensure_configured()
         import boto3
+        from botocore.config import Config
 
         self._client = boto3.client(
             "s3",
@@ -56,8 +60,46 @@ class CloudflareR2Storage(StorageProvider):
             aws_access_key_id=self._settings.access_key_id,
             aws_secret_access_key=self._settings.secret_access_key,
             region_name=self._settings.region or "auto",
+            config=Config(
+                connect_timeout=self._settings.connect_timeout_seconds,
+                read_timeout=self._settings.read_timeout_seconds,
+                retries={"max_attempts": 1, "mode": "standard"},
+            ),
         )
         return self._client
+
+    def _is_retryable(self, exc: BaseException) -> bool:
+        if isinstance(exc, ClientError):
+            code = str(exc.response.get("Error", {}).get("Code", ""))
+            status = int(
+                exc.response.get("ResponseMetadata", {}).get("HTTPStatusCode", 0)
+            )
+            if 400 <= status < 500 and status != 429:
+                return False
+            return code not in {"NoSuchKey", "NotFound", "404"}
+        return isinstance(exc, BotoCoreError)
+
+    async def _run_with_retry(self, func: Callable[..., Any], **kwargs: Any) -> Any:
+        """Execute a boto call with exponential backoff on transient failures."""
+        attempts = max(1, self._settings.retry_count + 1)
+        delay = self._settings.backoff_base_seconds
+        for attempt in range(1, attempts + 1):
+            try:
+                return await asyncio.to_thread(partial(func, **kwargs))
+            except (BotoCoreError, ClientError) as exc:
+                if attempt >= attempts or not self._is_retryable(exc):
+                    raise
+                logger.warning(
+                    "r2_operation_retry",
+                    operation=getattr(func, "__name__", str(func)),
+                    attempt=attempt,
+                    max_attempts=attempts,
+                    backoff_seconds=delay,
+                    error=str(exc),
+                )
+                await asyncio.sleep(delay)
+                delay = min(delay * 2.0, self._settings.backoff_max_seconds)
+        raise StorageException("R2 retry loop exhausted unexpectedly")
 
     async def _run(self, func: Any, *args: Any, **kwargs: Any) -> Any:
         return await asyncio.to_thread(partial(func, *args, **kwargs))
@@ -86,7 +128,7 @@ class CloudflareR2Storage(StorageProvider):
         if metadata:
             extra["Metadata"] = metadata
         try:
-            await self._run(
+            await self._run_with_retry(
                 client.put_object,
                 Bucket=self._settings.bucket_name,
                 Key=key,
@@ -101,10 +143,41 @@ class CloudflareR2Storage(StorageProvider):
             ) from exc
         return key
 
+    async def upload_stream(
+        self,
+        key: str,
+        stream: BinaryIO,
+        *,
+        content_type: str | None = None,
+        metadata: dict[str, str] | None = None,
+    ) -> str:
+        """Streaming upload: the file-like object is passed through unbuffered."""
+        client = self._get_client()
+        extra: dict[str, Any] = {}
+        if content_type:
+            extra["ContentType"] = content_type
+        if metadata:
+            extra["Metadata"] = metadata
+        try:
+            await self._run_with_retry(
+                client.put_object,
+                Bucket=self._settings.bucket_name,
+                Key=key,
+                Body=stream,
+                **extra,
+            )
+        except (BotoCoreError, ClientError) as exc:
+            logger.exception("r2_stream_upload_failed", key=key)
+            raise StorageException(
+                "Failed to stream-upload object to R2",
+                details={"key": key, "error": str(exc)},
+            ) from exc
+        return key
+
     async def download(self, key: str) -> bytes:
         client = self._get_client()
         try:
-            response = await self._run(
+            response = await self._run_with_retry(
                 client.get_object,
                 Bucket=self._settings.bucket_name,
                 Key=key,
@@ -118,10 +191,40 @@ class CloudflareR2Storage(StorageProvider):
                 details={"key": key, "error": str(exc)},
             ) from exc
 
+    async def download_stream(self, key: str) -> AsyncIterator[bytes]:
+        """Streaming download yielding chunks of configured size."""
+        client = self._get_client()
+        try:
+            response = await self._run_with_retry(
+                client.get_object,
+                Bucket=self._settings.bucket_name,
+                Key=key,
+            )
+        except (BotoCoreError, ClientError) as exc:
+            logger.exception("r2_stream_download_failed", key=key)
+            raise StorageException(
+                "Failed to stream-download object from R2",
+                details={"key": key, "error": str(exc)},
+            ) from exc
+
+        body = response["Body"]
+        chunk_size = max(1024, self._settings.streaming_chunk_size)
+        while True:
+            try:
+                chunk = await self._run(body.read, chunk_size)
+            except (BotoCoreError, ClientError) as exc:
+                raise StorageException(
+                    "Failed while streaming object from R2",
+                    details={"key": key, "error": str(exc)},
+                ) from exc
+            if not chunk:
+                break
+            yield cast(bytes, chunk)
+
     async def delete(self, key: str) -> None:
         client = self._get_client()
         try:
-            await self._run(
+            await self._run_with_retry(
                 client.delete_object,
                 Bucket=self._settings.bucket_name,
                 Key=key,
@@ -136,7 +239,7 @@ class CloudflareR2Storage(StorageProvider):
     async def exists(self, key: str) -> bool:
         client = self._get_client()
         try:
-            await self._run(
+            await self._run_with_retry(
                 client.head_object,
                 Bucket=self._settings.bucket_name,
                 Key=key,
@@ -159,7 +262,7 @@ class CloudflareR2Storage(StorageProvider):
     async def list(self, prefix: str = "", *, max_keys: int = 1000) -> list[str]:
         client = self._get_client()
         try:
-            response = await self._run(
+            response = await self._run_with_retry(
                 client.list_objects_v2,
                 Bucket=self._settings.bucket_name,
                 Prefix=prefix,

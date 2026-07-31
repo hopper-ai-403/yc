@@ -5,16 +5,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import PredictionSettings, Settings, get_settings
 from app.dependencies import get_db_session, get_storage
+from app.prediction.export import PredictionExportService
 from app.prediction.factory import (
     build_prediction_export_service,
     build_prediction_service,
 )
-from app.prediction.export import PredictionExportService
 from app.prediction.service import PredictionService
 from app.shared.storage.provider import StorageProvider
 
 
-def get_prediction_settings(settings: Settings = Depends(get_settings)) -> PredictionSettings:
+def get_prediction_settings(
+    settings: Settings = Depends(get_settings),
+) -> PredictionSettings:
     return settings.prediction
 
 

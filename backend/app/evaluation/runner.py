@@ -39,7 +39,9 @@ class BatchRunner:
         if batch is None:
             raise BatchNotFoundForEvaluationException(batch_id)
         if not batch.assets:
-            raise BatchNotRunnableException(batch_id, reason="batch has no audio assets")
+            raise BatchNotRunnableException(
+                batch_id, reason="batch has no audio assets"
+            )
 
         job = await self._jobs.create_job(batch_id)
 

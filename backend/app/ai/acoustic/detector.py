@@ -21,6 +21,7 @@ class NoiseDetector(Protocol):
         vad: VADResult,
     ) -> tuple[bool, float, dict[str, float]]:
         """Return (present, score, details)."""
+        ...
 
 
 class SignalBasedNoiseDetector:

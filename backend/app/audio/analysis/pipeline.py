@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import tempfile
 import time
@@ -69,7 +70,10 @@ class AnalysisPipeline:
 
         with tempfile.TemporaryDirectory(prefix="aip-analysis-") as tmp:
             # Keep a local copy for debugging-friendly paths if needed later.
-            Path(tmp, "normalized.wav").write_bytes(wav_bytes)
+            await asyncio.to_thread(
+                Path(tmp, "normalized.wav").write_bytes,
+                wav_bytes,
+            )
 
             def _compute() -> tuple[AnalysisArtifact, dict[str, int]]:
                 waveform, sample_rate = load_waveform(

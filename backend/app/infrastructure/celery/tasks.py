@@ -24,6 +24,7 @@ from app.infrastructure.redis.job_progress import JobProgressCache
 from app.jobs.factory import build_job_service
 from app.shared.domain.enums import AudioStatus, JobStatus
 from app.shared.logging.setup import get_logger
+from app.shared.profiling import PipelineProfiler
 
 logger = get_logger(__name__)
 
@@ -88,8 +89,8 @@ def process_batch(self: Any, job_id: str) -> dict[str, Any]:
         run_async(_finalize_job(job_uuid, worker))
         return {"job_id": job_id, "audio_count": 0, "status": "empty_or_cancelled"}
 
-    header = group(process_audio.s(audio_id, job_id) for audio_id in audio_ids)
-    async_result = chord(header)(finalize_job.s(job_id))
+    header = group(process_audio.s(audio_id, job_id) for audio_id in audio_ids)  # type: ignore[attr-defined]
+    async_result = chord(header)(finalize_job.s(job_id))  # type: ignore[attr-defined]
     return {
         "job_id": job_id,
         "audio_count": len(audio_ids),
@@ -110,6 +111,15 @@ def process_batch(self: Any, job_id: str) -> dict[str, Any]:
 def process_audio(self: Any, audio_id: str, job_id: str) -> dict[str, Any]:
     """Process a single audio asset via the preprocessing pipeline (no AI)."""
     worker = _worker_id(self)
+    if getattr(self.request, "retries", 0):
+        logger.warning(
+            "audio_task_retrying",
+            audio_id=audio_id,
+            job_id=job_id,
+            retry_count=self.request.retries,
+            worker_id=worker,
+            status="retrying",
+        )
     return run_async(_process_audio(UUID(audio_id), UUID(job_id), worker))
 
 
@@ -126,23 +136,32 @@ async def _process_audio(
     worker_id: str,
 ) -> dict[str, Any]:
     started = time.perf_counter()
+    profiler = PipelineProfiler(
+        enabled=get_settings().performance.pipeline_profiling,
+    )
 
     async def begin(session):  # type: ignore[no-untyped-def]
         service = build_job_service(session)
         if await service.is_cancelled(job_id):
-            return {"done": True, "payload": {
-                "audio_id": str(audio_id),
-                "status": "skipped_cancelled",
-                "worker_id": worker_id,
-            }}
+            return {
+                "done": True,
+                "payload": {
+                    "audio_id": str(audio_id),
+                    "status": "skipped_cancelled",
+                    "worker_id": worker_id,
+                },
+            }
 
         status = await service.get_audio_status(audio_id)
         if status is None:
-            return {"done": True, "payload": {
-                "audio_id": str(audio_id),
-                "status": "missing",
-                "worker_id": worker_id,
-            }}
+            return {
+                "done": True,
+                "payload": {
+                    "audio_id": str(audio_id),
+                    "status": "missing",
+                    "worker_id": worker_id,
+                },
+            }
 
         from app.jobs.state_machine import is_audio_terminal_success
 
@@ -154,18 +173,24 @@ async def _process_audio(
                 worker_id=worker_id,
                 status=status.value,
             )
-            return {"done": True, "payload": {
-                "audio_id": str(audio_id),
-                "status": "already_completed",
-                "worker_id": worker_id,
-            }}
+            return {
+                "done": True,
+                "payload": {
+                    "audio_id": str(audio_id),
+                    "status": "already_completed",
+                    "worker_id": worker_id,
+                },
+            }
 
         if status is AudioStatus.FAILED:
-            return {"done": True, "payload": {
-                "audio_id": str(audio_id),
-                "status": "failed_skip",
-                "worker_id": worker_id,
-            }}
+            return {
+                "done": True,
+                "payload": {
+                    "audio_id": str(audio_id),
+                    "status": "failed_skip",
+                    "worker_id": worker_id,
+                },
+            }
 
         if status in {AudioStatus.UPLOADED, AudioStatus.VALIDATED}:
             await service.transition_audio(
@@ -197,11 +222,14 @@ async def _process_audio(
                 worker_id=worker_id,
             )
         else:
-            return {"done": True, "payload": {
-                "audio_id": str(audio_id),
-                "status": f"unexpected_{status.value}",
-                "worker_id": worker_id,
-            }}
+            return {
+                "done": True,
+                "payload": {
+                    "audio_id": str(audio_id),
+                    "status": f"unexpected_{status.value}",
+                    "worker_id": worker_id,
+                },
+            }
         return {"done": False, "payload": None}
 
     begin_result = await with_session(begin)
@@ -218,11 +246,13 @@ async def _process_audio(
     from app.audio.preprocessing.factory import build_preprocessing_service
 
     try:
+
         async def preprocess(session):  # type: ignore[no-untyped-def]
             service = build_preprocessing_service(session)
             return await service.preprocess_audio(audio_id)
 
-        await with_session(preprocess)
+        with profiler.stage("preprocessing"):
+            await with_session(preprocess)
     except PreprocessingTimeoutException:
         raise TimeoutError("preprocessing timed out") from None
     except (AudioValidationException, InvalidMetadataException) as exc:
@@ -234,8 +264,8 @@ async def _process_audio(
             "worker_id": worker_id,
         }
     except PreprocessingException as exc:
-        # Storage / ffmpeg failures: mark failed for this attempt; Celery may retry
-        # ConnectionError/TimeoutError only. Non-transient preprocessing errors fail asset.
+        # Storage / ffmpeg failures: mark failed for this attempt; Celery may
+        # retry ConnectionError/TimeoutError only. Non-transient errors fail.
         await with_session(_mark_audio_failed(audio_id, job_id, worker_id, str(exc)))
         return {
             "audio_id": str(audio_id),
@@ -256,11 +286,13 @@ async def _process_audio(
     from app.audio.analysis.factory import build_analysis_service
 
     try:
+
         async def analyze(session):  # type: ignore[no-untyped-def]
             service = build_analysis_service(session)
             return await service.analyze_audio(audio_id)
 
-        await with_session(analyze)
+        with profiler.stage("analysis"):
+            await with_session(analyze)
     except AnalysisTimeoutException:
         raise TimeoutError("analysis timed out") from None
     except (InvalidWaveformException, VADException, FeatureExtractionException) as exc:
@@ -290,11 +322,13 @@ async def _process_audio(
     from app.ai.technical.factory import build_technical_service
 
     try:
+
         async def technical(session):  # type: ignore[no-untyped-def]
             service = build_technical_service(session)
             return await service.analyze_audio(audio_id)
 
-        await with_session(technical)
+        with profiler.stage("technical"):
+            await with_session(technical)
     except TechnicalArtifactMissingException as exc:
         # Transient: analysis artifacts may not be readable yet; Celery retries.
         raise TimeoutError(f"technical artifacts unavailable: {exc}") from None
@@ -316,11 +350,13 @@ async def _process_audio(
     from app.ai.acoustic.factory import build_acoustic_service
 
     try:
+
         async def acoustic(session):  # type: ignore[no-untyped-def]
             service = build_acoustic_service(session)
             return await service.analyze_audio(audio_id)
 
-        await with_session(acoustic)
+        with profiler.stage("acoustic"):
+            await with_session(acoustic)
     except AcousticArtifactMissingException as exc:
         # Transient: analysis artifacts may not be readable yet; Celery retries.
         raise TimeoutError(f"acoustic artifacts unavailable: {exc}") from None
@@ -342,11 +378,13 @@ async def _process_audio(
     from app.ai.speech.factory import build_speech_service
 
     try:
+
         async def speech(session):  # type: ignore[no-untyped-def]
             service = build_speech_service(session)
             return await service.analyze_audio(audio_id)
 
-        await with_session(speech)
+        with profiler.stage("speech"):
+            await with_session(speech)
     except SpeechArtifactMissingException as exc:
         # Transient: waveform may not be readable yet; Celery retries.
         raise TimeoutError(f"speech artifacts unavailable: {exc}") from None
@@ -368,11 +406,16 @@ async def _process_audio(
     from app.prediction.factory import build_prediction_service
 
     try:
+
         async def predict(session):  # type: ignore[no-untyped-def]
             service = build_prediction_service(session)
-            return await service.generate_prediction(audio_id)
+            return await service.generate_prediction(
+                audio_id,
+                profile=profiler.to_dict(),
+            )
 
-        await with_session(predict)
+        with profiler.stage("prediction"):
+            await with_session(predict)
     except PredictionArtifactMissingException as exc:
         # Transient: engine results may not be persisted yet; Celery retries.
         raise TimeoutError(f"prediction artifacts unavailable: {exc}") from None
@@ -404,6 +447,16 @@ async def _process_audio(
                 "status": "already_completed",
                 "worker_id": worker_id,
             }
+
+        from app.audio.repository import SqlAlchemyAudioRepository
+
+        timing: dict[str, Any] = dict(profiler.durations_ms())
+        timing["total_pipeline_duration_ms"] = profiler.total_duration_ms()
+        timing["stages"] = profiler.stages
+        await SqlAlchemyAudioRepository(session).save_timing(
+            audio_id,
+            timing_json=timing,
+        )
 
         await service.transition_audio(
             audio_id,

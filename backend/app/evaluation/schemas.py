@@ -45,6 +45,7 @@ class BatchMetricsRead(BaseModel):
     min_processing_time_ms: float | None = None
     max_processing_time_ms: float | None = None
     average_confidence: float | None = None
+    batch_duration_ms: float | None = None
     computed_at: datetime
 
 

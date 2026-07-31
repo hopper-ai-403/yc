@@ -10,6 +10,7 @@ from app.evaluation.exporter import BatchExporter
 from app.evaluation.metrics import BatchMetricsCalculator
 from app.evaluation.models import BatchMetrics
 from app.evaluation.repository import BatchMetricsRepository
+from app.jobs.repository import JobRepository
 from app.prediction.repository import PredictionRepository
 from app.shared.logging.setup import get_logger
 
@@ -27,12 +28,14 @@ class EvaluationPipeline:
         metrics_repo: BatchMetricsRepository,
         calculator: BatchMetricsCalculator,
         exporter: BatchExporter,
+        jobs: JobRepository | None = None,
     ) -> None:
         self._assets = assets
         self._predictions = predictions
         self._metrics = metrics_repo
         self._calculator = calculator
         self._exporter = exporter
+        self._jobs = jobs
 
     async def finalize_batch(
         self,
@@ -45,6 +48,7 @@ class EvaluationPipeline:
         predictions = await self._predictions.find_by_batch(batch_id)
 
         computed = self._calculator.calculate(assets=assets, predictions=predictions)
+        batch_duration_ms = await self._batch_duration_ms(batch_id)
         metrics = await self._metrics.upsert(
             batch_id,
             total_audio=computed.total_audio,
@@ -55,6 +59,7 @@ class EvaluationPipeline:
             min_processing_time_ms=computed.min_processing_time_ms,
             max_processing_time_ms=computed.max_processing_time_ms,
             average_confidence=computed.average_confidence,
+            batch_duration_ms=batch_duration_ms,
             computed_at=datetime.now(timezone.utc),
         )
         logger.info(
@@ -70,3 +75,11 @@ class EvaluationPipeline:
             regenerate=regenerate_exports,
         )
         return metrics
+
+    async def _batch_duration_ms(self, batch_id: UUID) -> float | None:
+        if self._jobs is None:
+            return None
+        job = await self._jobs.find_by_batch(batch_id)
+        if job is None or job.started_at is None or job.completed_at is None:
+            return None
+        return round((job.completed_at - job.started_at).total_seconds() * 1000.0, 2)

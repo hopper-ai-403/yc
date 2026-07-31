@@ -48,7 +48,10 @@ class FFprobeClient:
         except subprocess.TimeoutExpired as exc:
             raise PreprocessingTimeoutException(
                 "ffprobe timed out",
-                details={"path": str(path), "timeout": self._settings.ffprobe_timeout_seconds},
+                details={
+                    "path": str(path),
+                    "timeout": self._settings.ffprobe_timeout_seconds,
+                },
             ) from exc
         except FileNotFoundError as exc:
             raise FFprobeException(

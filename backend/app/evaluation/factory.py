@@ -60,6 +60,7 @@ def build_evaluation_service(
             metrics_repo=metrics_repo,
             calculator=BatchMetricsCalculator(),
             exporter=exporter,
+            jobs=SqlAlchemyJobRepository(session),
         ),
         exporter=exporter,
         metrics_repo=metrics_repo,

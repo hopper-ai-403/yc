@@ -146,11 +146,26 @@ async def health_ready(
         status.HTTP_200_OK if all_healthy else status.HTTP_503_SERVICE_UNAVAILABLE
     )
     components = {name: component.model_dump() for name, component in report.items()}
+
+    from app.infrastructure.redis.client import get_redis_client as _get_redis
+    from app.infrastructure.redis.job_progress import JobProgressCache
+    from app.infrastructure.warmup import is_model_loaded
+
+    workers = 0
+    try:
+        cache = JobProgressCache(_get_redis(), settings.jobs)
+        workers = len(await cache.list_workers())
+    except Exception:
+        workers = 0
+
     payload = SuccessResponse(
         message="Readiness check",
         data={
             "status": "healthy" if all_healthy else "unhealthy",
             "service": settings.logging.service_name,
+            "system_version": settings.app.version,
+            "model_loaded": is_model_loaded(settings.speech.model_name),
+            "worker_count": workers,
             "components": components,
         },
     )

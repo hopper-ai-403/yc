@@ -13,13 +13,19 @@ def create_celery_app() -> Celery:
         "audio_intelligence",
         broker=settings.celery.broker_url,
         backend=settings.celery.result_backend,
-        include=["app.infrastructure.celery.tasks"],
+        include=[
+            "app.infrastructure.celery.tasks",
+            "app.infrastructure.celery.signals",
+        ],
     )
 
     app.conf.update(
         task_track_started=settings.celery.task_track_started,
         task_always_eager=settings.celery.task_always_eager,
-        worker_prefetch_multiplier=settings.celery.worker_prefetch_multiplier,
+        worker_prefetch_multiplier=settings.performance.prefetch_multiplier,
+        worker_concurrency=settings.performance.worker_concurrency,
+        task_time_limit=settings.performance.task_timeout,
+        task_soft_time_limit=int(settings.performance.task_timeout * 0.9),
         task_acks_late=settings.celery.task_acks_late,
         task_serializer="json",
         result_serializer="json",

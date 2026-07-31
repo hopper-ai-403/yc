@@ -32,6 +32,7 @@ class BatchMetricsRepository(ABC):
         min_processing_time_ms: float | None,
         max_processing_time_ms: float | None,
         average_confidence: float | None,
+        batch_duration_ms: float | None,
         computed_at: datetime,
     ) -> BatchMetrics:
         """Insert or refresh metrics for a batch (idempotent)."""
@@ -60,6 +61,7 @@ class SqlAlchemyBatchMetricsRepository(BatchMetricsRepository):
         min_processing_time_ms: float | None,
         max_processing_time_ms: float | None,
         average_confidence: float | None,
+        batch_duration_ms: float | None,
         computed_at: datetime,
     ) -> BatchMetrics:
         metrics = await self.find_by_batch(batch_id)
@@ -74,6 +76,7 @@ class SqlAlchemyBatchMetricsRepository(BatchMetricsRepository):
         metrics.min_processing_time_ms = min_processing_time_ms
         metrics.max_processing_time_ms = max_processing_time_ms
         metrics.average_confidence = average_confidence
+        metrics.batch_duration_ms = batch_duration_ms
         metrics.computed_at = computed_at
         await self._session.flush()
         await self._session.refresh(metrics)

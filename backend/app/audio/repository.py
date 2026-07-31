@@ -118,6 +118,15 @@ class AudioRepository(ABC):
     ) -> AudioAsset | None:
         """Persist speech intelligence outputs onto the asset."""
 
+    @abstractmethod
+    async def save_timing(
+        self,
+        asset_id: UUID,
+        *,
+        timing_json: dict[str, Any],
+    ) -> AudioAsset | None:
+        """Persist per-stage pipeline timing metadata onto the asset."""
+
 
 class SqlAlchemyAudioBatchRepository(AudioBatchRepository):
     """SQLAlchemy-backed AudioBatchRepository."""
@@ -306,6 +315,20 @@ class SqlAlchemyAudioRepository(AudioRepository):
         asset.speech_json = dict(speech_json)
         asset.speech_completed = True
         asset.speech_completed_at = speech_completed_at
+        await self._session.flush()
+        await self._session.refresh(asset)
+        return asset
+
+    async def save_timing(
+        self,
+        asset_id: UUID,
+        *,
+        timing_json: dict[str, Any],
+    ) -> AudioAsset | None:
+        asset = await self.find_by_id(asset_id)
+        if asset is None:
+            return None
+        asset.timing_json = dict(timing_json)
         await self._session.flush()
         await self._session.refresh(asset)
         return asset

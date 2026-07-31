@@ -46,14 +46,10 @@ class FeatureExtractor:
             peak_amplitude = float(np.max(np.abs(waveform)))
             zcr = float(np.mean(librosa.feature.zero_crossing_rate(y=waveform)))
             centroid = float(
-                np.mean(
-                    librosa.feature.spectral_centroid(y=waveform, sr=sample_rate)
-                )
+                np.mean(librosa.feature.spectral_centroid(y=waveform, sr=sample_rate))
             )
             bandwidth = float(
-                np.mean(
-                    librosa.feature.spectral_bandwidth(y=waveform, sr=sample_rate)
-                )
+                np.mean(librosa.feature.spectral_bandwidth(y=waveform, sr=sample_rate))
             )
             rolloff = float(
                 np.mean(librosa.feature.spectral_rolloff(y=waveform, sr=sample_rate))

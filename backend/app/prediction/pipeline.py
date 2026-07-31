@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import time
+from typing import Any
 from uuid import UUID
 
 from app.audio.models import AudioAsset
@@ -50,6 +51,8 @@ class PredictionPipeline:
     async def run(
         self,
         asset: AudioAsset,
+        *,
+        profile: dict[str, Any] | None = None,
     ) -> tuple[AssessmentPrediction, ConfidenceBreakdown, InternalPrediction | None]:
         started = time.perf_counter()
 
@@ -68,10 +71,13 @@ class PredictionPipeline:
                 confidence=breakdown,
                 prediction=prediction,
             )
+            payload = internal.to_storage_dict()
+            if profile is not None:
+                payload["profile"] = profile
             key = prediction_storage_key(asset.batch_id, asset.id)
             await self._storage.upload(
                 key,
-                json.dumps(internal.to_storage_dict()).encode("utf-8"),
+                json.dumps(payload).encode("utf-8"),
                 content_type="application/json",
                 metadata={
                     "audio_id": str(asset.id),
