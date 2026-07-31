@@ -488,8 +488,21 @@ async def _finalize_job(
             )
             status = JobStatus.FAILED.value
         else:
-            await service.complete_job(job_id, worker_id=worker_id)
+            completed = await service.complete_job(job_id, worker_id=worker_id)
             status = JobStatus.COMPLETED.value
+            # Evaluation finalize: metrics + exports (idempotent, non-fatal).
+            from app.evaluation.factory import build_evaluation_service
+
+            try:
+                evaluation = build_evaluation_service(session)
+                await evaluation.finalize_batch(completed.batch_id)
+            except Exception as exc:
+                logger.error(
+                    "evaluation_finalize_failed",
+                    job_id=str(job_id),
+                    batch_id=str(completed.batch_id),
+                    error=str(exc),
+                )
 
         return {
             "job_id": str(job_id),

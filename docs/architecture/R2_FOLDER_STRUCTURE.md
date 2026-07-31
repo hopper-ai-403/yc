@@ -22,6 +22,9 @@ Bucket: configured via `R2_BUCKET_NAME` (example: `ycaudiointelligence`)
         {audio_id}.json
       predictions/
         {audio_id}.json
+      exports/
+        results.csv
+        results.json
 ```
 
 ## Key formats
@@ -35,6 +38,8 @@ uploads/{batch_id}/technical/{audio_id}.json
 uploads/{batch_id}/acoustic/{audio_id}.json
 uploads/{batch_id}/speech/{audio_id}.json
 uploads/{batch_id}/predictions/{audio_id}.json
+uploads/{batch_id}/exports/results.csv
+uploads/{batch_id}/exports/results.json
 ```
 
 ## Rules
@@ -43,3 +48,4 @@ uploads/{batch_id}/predictions/{audio_id}.json
 - Normalized audio is always PCM WAV 16 kHz mono 16-bit
 - Metadata JSON mirrors `AudioTechnicalMetadata`
 - Object metadata includes `audio_id`, `batch_id`, and `stage`
+- Export generation is idempotent; existing artifacts are reused unless regenerated
