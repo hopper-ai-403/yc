@@ -29,6 +29,9 @@ def create_celery_app() -> Celery:
         task_default_queue="default",
         task_routes={
             "app.infrastructure.celery.tasks.heartbeat": {"queue": "default"},
+            "app.infrastructure.celery.tasks.process_batch": {"queue": "default"},
+            "app.infrastructure.celery.tasks.process_audio": {"queue": "default"},
+            "app.infrastructure.celery.tasks.finalize_job": {"queue": "default"},
         },
     )
 

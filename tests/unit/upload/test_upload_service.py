@@ -223,6 +223,13 @@ async def test_r2_upload_keys(upload_service: UploadService) -> None:
 
 
 def test_upload_api_endpoint_with_mocked_service() -> None:
+    from unittest.mock import patch
+
+    from app.infrastructure.redis.client import get_redis_client
+    from app.upload.dependencies import get_upload_service
+
+    get_settings.cache_clear()
+    get_redis_client.cache_clear()
     application = create_application()
 
     async def fake_upload(uploads: list[IncomingUpload]) -> object:
@@ -238,19 +245,23 @@ def test_upload_api_endpoint_with_mocked_service() -> None:
 
     mock_service = AsyncMock()
     mock_service.upload = AsyncMock(side_effect=fake_upload)
-
-    from app.upload.dependencies import get_upload_service
-
     application.dependency_overrides[get_upload_service] = lambda: mock_service
 
-    with TestClient(application) as client:
-        response = client.post(
-            "/api/v1/uploads",
-            files=[("files", ("demo.wav", b"RIFFDATA", "audio/wav"))],
-        )
+    redis_mock = AsyncMock()
+    redis_mock.connect = AsyncMock()
+    redis_mock.disconnect = AsyncMock()
+
+    with patch("app.main.get_redis_client", return_value=redis_mock):
+        with TestClient(application) as client:
+            response = client.post(
+                "/api/v1/uploads",
+                files=[("files", ("demo.wav", b"RIFFDATA", "audio/wav"))],
+            )
 
     assert response.status_code == 201
     body = response.json()
     assert body["success"] is True
     assert body["data"]["files_uploaded"] == 1
     application.dependency_overrides.clear()
+    get_settings.cache_clear()
+    get_redis_client.cache_clear()

@@ -34,8 +34,10 @@ def test_audio_status_values() -> None:
     assert {status.value for status in AudioStatus} == {
         "UPLOADED",
         "VALIDATED",
+        "QUEUED",
         "PROCESSING",
         "PROCESSED",
+        "COMPLETED",
         "FAILED",
     }
 

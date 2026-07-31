@@ -12,7 +12,14 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, UniqueConstraint
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -35,6 +42,12 @@ class Job(Base, UUIDPrimaryKeyMixin, TimestampMixin):
             name="ck_jobs_progress_range",
         ),
         CheckConstraint("retry_count >= 0", name="ck_jobs_retry_count_nonnegative"),
+        CheckConstraint("total_files >= 0", name="ck_jobs_total_files_nonnegative"),
+        CheckConstraint(
+            "processed_files >= 0",
+            name="ck_jobs_processed_files_nonnegative",
+        ),
+        CheckConstraint("failed_files >= 0", name="ck_jobs_failed_files_nonnegative"),
     )
 
     batch_id: Mapped[UUID] = mapped_column(
@@ -51,6 +64,10 @@ class Job(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     )
     progress: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    total_files: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    processed_files: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    failed_files: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    error_message: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,

@@ -28,7 +28,12 @@ class RedisClient:
     async def disconnect(self) -> None:
         """Close the Redis connection."""
         if self._client is not None:
-            await self._client.aclose()
+            close = getattr(self._client, "aclose", None)
+            if close is None:
+                close = getattr(self._client, "close")
+            result = close()
+            if hasattr(result, "__await__"):
+                await result  # type: ignore[misc]
             self._client = None
 
     @property

@@ -190,6 +190,18 @@ class CelerySettings(BaseSettings):
     task_acks_late: bool = True
 
 
+class JobSettings(BaseSettings):
+    """Job orchestration settings."""
+
+    model_config = SettingsConfigDict(env_prefix="JOB_", extra="ignore")
+
+    max_retries: int = 3
+    retry_backoff_base_seconds: int = 2
+    simulate_processing_ms: int = 100
+    heartbeat_ttl_seconds: int = 60
+    progress_ttl_seconds: int = 86_400
+
+
 class Settings(BaseSettings):
     """Root settings aggregating all configuration domains."""
 
@@ -208,6 +220,7 @@ class Settings(BaseSettings):
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
     ai: AISettings = Field(default_factory=AISettings)
     celery: CelerySettings = Field(default_factory=CelerySettings)
+    jobs: JobSettings = Field(default_factory=JobSettings)
 
 
 @lru_cache

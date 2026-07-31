@@ -31,6 +31,16 @@ class JobRepository(ABC):
         """Return jobs that are pending, queued, or running."""
 
     @abstractmethod
+    async def list_jobs(
+        self,
+        *,
+        status: JobStatus | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[Job]:
+        """List jobs newest-first with optional status filter."""
+
+    @abstractmethod
     async def update_status(
         self,
         job_id: UUID,
@@ -39,6 +49,10 @@ class JobRepository(ABC):
         progress: int | None = None,
     ) -> Job | None:
         """Update job status and optional progress."""
+
+    @abstractmethod
+    async def save(self, job: Job) -> Job:
+        """Persist mutations already applied to a job entity."""
 
 
 class SqlAlchemyJobRepository(JobRepository):
@@ -77,6 +91,20 @@ class SqlAlchemyJobRepository(JobRepository):
         result = await self._session.execute(statement)
         return list(result.scalars().all())
 
+    async def list_jobs(
+        self,
+        *,
+        status: JobStatus | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[Job]:
+        statement = select(Job).order_by(Job.created_at.desc())
+        if status is not None:
+            statement = statement.where(Job.status == status)
+        statement = statement.offset(offset).limit(limit)
+        result = await self._session.execute(statement)
+        return list(result.scalars().all())
+
     async def update_status(
         self,
         job_id: UUID,
@@ -91,6 +119,12 @@ class SqlAlchemyJobRepository(JobRepository):
         if progress is not None:
             self._validate_progress(progress)
             job.progress = progress
+        await self._session.flush()
+        await self._session.refresh(job)
+        return job
+
+    async def save(self, job: Job) -> Job:
+        self._validate_progress(job.progress)
         await self._session.flush()
         await self._session.refresh(job)
         return job

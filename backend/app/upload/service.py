@@ -175,7 +175,14 @@ class UploadService:
                 )
 
             job = await self._jobs.create(
-                Job(batch_id=batch.id, status=JobStatus.PENDING, progress=0)
+                Job(
+                    batch_id=batch.id,
+                    status=JobStatus.PENDING,
+                    progress=0,
+                    total_files=len(accepted),
+                    processed_files=0,
+                    failed_files=0,
+                )
             )
         except Exception as exc:
             await self._cleanup_keys(uploaded_keys)
