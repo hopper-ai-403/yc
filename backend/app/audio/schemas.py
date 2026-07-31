@@ -36,6 +36,10 @@ class AudioAssetRead(BaseModel):
     analysis_storage_key: str | None = None
     analysis_version: str | None = None
     analysis_completed_at: datetime | None = None
+    technical_completed_at: datetime | None = None
+    acoustic_completed_at: datetime | None = None
+    speech_completed_at: datetime | None = None
+    timing_json: dict[str, Any] | None = None
     created_at: datetime
     updated_at: datetime
 

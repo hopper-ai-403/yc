@@ -1,0 +1,1 @@
+export const AUDIO_DETAIL_REFETCH_MS = 5_000;

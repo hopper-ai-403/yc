@@ -137,6 +137,10 @@ export interface AudioAssetRead {
   analysis_storage_key: string | null;
   analysis_version: string | null;
   analysis_completed_at: string | null;
+  technical_completed_at: string | null;
+  acoustic_completed_at: string | null;
+  speech_completed_at: string | null;
+  timing_json: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }

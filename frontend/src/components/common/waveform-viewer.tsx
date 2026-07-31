@@ -1,6 +1,6 @@
 "use client";
 
-import { Pause, Play } from "lucide-react";
+import { Pause, Play, ZoomIn, ZoomOut } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type WaveSurfer from "wavesurfer.js";
 
@@ -13,18 +13,27 @@ interface WaveformViewerProps {
   url: string;
   /** Speech segments highlighted under the waveform. */
   segments?: TimeSegment[];
+  /** Silence segments rendered on a secondary track. */
+  silenceSegments?: TimeSegment[];
   height?: number;
   className?: string;
   onReady?: (duration: number) => void;
+  /** Show zoom in/out controls. */
+  zoomable?: boolean;
 }
+
+const MIN_PX_PER_SEC = 8;
+const MAX_PX_PER_SEC = 512;
 
 /** WaveSurfer-based waveform with optional speech-segment overlay. */
 export function WaveformViewer({
   url,
   segments = [],
+  silenceSegments = [],
   height = 96,
   className,
   onReady,
+  zoomable = false,
 }: WaveformViewerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
@@ -32,6 +41,16 @@ export function WaveformViewer({
   const [playing, setPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [pxPerSec, setPxPerSec] = useState(0);
+
+  const zoom = (factor: number) => {
+    const next = Math.min(
+      MAX_PX_PER_SEC,
+      Math.max(MIN_PX_PER_SEC, (pxPerSec || MIN_PX_PER_SEC) * factor),
+    );
+    wavesurferRef.current?.zoom(next);
+    setPxPerSec(next);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -63,6 +82,9 @@ export function WaveformViewer({
         if (cancelled) return;
         setReady(true);
         setDuration(dur);
+        if (containerRef.current && dur > 0) {
+          setPxPerSec(containerRef.current.clientWidth / dur);
+        }
         onReady?.(dur);
       });
       ws.on("play", () => setPlaying(true));
@@ -119,6 +141,27 @@ export function WaveformViewer({
             })}
           </div>
         ) : null}
+        {ready && duration > 0 && silenceSegments.length > 0 ? (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 bottom-2 h-1"
+          >
+            {silenceSegments.map((segment, index) => {
+              const left = (segment.start / duration) * 100;
+              const width = Math.max(
+                0.5,
+                ((segment.end - segment.start) / duration) * 100,
+              );
+              return (
+                <span
+                  key={`${segment.start}-${index}`}
+                  className="absolute bottom-0 h-full rounded-full bg-warning/50"
+                  style={{ left: `${left}%`, width: `${width}%` }}
+                />
+              );
+            })}
+          </div>
+        ) : null}
       </div>
       <div className="mt-2 flex items-center gap-2">
         <Button
@@ -126,13 +169,36 @@ export function WaveformViewer({
           variant="outline"
           disabled={!ready}
           onClick={() => void wavesurferRef.current?.playPause()}
+          aria-label={playing ? "Pause playback" : "Start playback"}
         >
           {playing ? <Pause /> : <Play />}
           {playing ? "Pause" : "Play"}
         </Button>
+        {zoomable ? (
+          <div className="flex items-center gap-1">
+            <Button
+              size="icon"
+              variant="ghost"
+              disabled={!ready || pxPerSec >= MAX_PX_PER_SEC}
+              onClick={() => zoom(2)}
+              aria-label="Zoom in"
+            >
+              <ZoomIn />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              disabled={!ready || pxPerSec <= MIN_PX_PER_SEC}
+              onClick={() => zoom(0.5)}
+              aria-label="Zoom out"
+            >
+              <ZoomOut />
+            </Button>
+          </div>
+        ) : null}
         {segments.length > 0 ? (
           <span className="text-[10px] text-muted-foreground">
-            Blue bars mark detected speech
+            Blue bars mark speech{silenceSegments.length > 0 ? ", amber bars mark silence" : ""}
           </span>
         ) : null}
       </div>
