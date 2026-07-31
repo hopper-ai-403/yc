@@ -305,6 +305,39 @@ class TechnicalSettings(BaseSettings):
     overlap_spread_max: float = 1.4
 
 
+class AcousticSettings(BaseSettings):
+    """Acoustic intelligence engine settings (noise detection/classification)."""
+
+    model_config = SettingsConfigDict(env_prefix="ACOUSTIC_", extra="ignore")
+
+    # Noise detection thresholds.
+    noise_snr_threshold_db: float = 18.0
+    noise_presence_score_threshold: float = 0.5
+    noise_silence_zcr_min: float = 0.04
+    noise_silence_zcr_max: float = 0.25
+    noise_bandwidth_min_hz: float = 2500.0
+    noise_bandwidth_max_hz: float = 6000.0
+
+    # Severity scoring weights and bands.
+    severity_medium_threshold: float = 0.35
+    severity_high_threshold: float = 0.65
+    severity_snr_full_at_db: float = 5.0
+    severity_snr_zero_at_db: float = 25.0
+    severity_noise_ratio_weight: float = 0.35
+    severity_snr_weight: float = 0.35
+    severity_noise_duration_weight: float = 0.3
+
+    # Classification heuristics anchors.
+    classify_music_centroid_hz: float = 2500.0
+    classify_music_rolloff_hz: float = 5500.0
+    classify_traffic_centroid_hz: float = 900.0
+    classify_wind_bandwidth_hz: float = 4500.0
+    classify_wind_centroid_hz: float = 1200.0
+    classify_static_zcr: float = 0.16
+    classify_keyboard_zcr: float = 0.10
+    classify_chatter_min_segments: int = 8
+
+
 class Settings(BaseSettings):
     """Root settings aggregating all configuration domains."""
 
@@ -327,6 +360,7 @@ class Settings(BaseSettings):
     preprocessing: PreprocessingSettings = Field(default_factory=PreprocessingSettings)
     analysis: AnalysisSettings = Field(default_factory=AnalysisSettings)
     technical: TechnicalSettings = Field(default_factory=TechnicalSettings)
+    acoustic: AcousticSettings = Field(default_factory=AcousticSettings)
 
 
 @lru_cache

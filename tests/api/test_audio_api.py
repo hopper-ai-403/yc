@@ -10,6 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.audio.schemas import (
+    AudioAcousticRead,
     AudioAnalysisRead,
     AudioAssetRead,
     AudioDownloadData,
@@ -118,6 +119,16 @@ def api_client(audio_read: AudioAssetRead) -> TestClient:
             technical_completed=True,
         )
     )
+    service.get_acoustic = AsyncMock(
+        return_value=AudioAcousticRead(
+            audio_id=audio_read.id,
+            background_noise_present=True,
+            background_noise_type="TRAFFIC",
+            background_noise_severity="LOW",
+            acoustic_version="1.0.0",
+            acoustic_completed=True,
+        )
+    )
     application.dependency_overrides[get_audio_query_service] = lambda: service
 
     redis_mock = AsyncMock()
@@ -167,3 +178,14 @@ def test_get_technical(api_client: TestClient, audio_read: AudioAssetRead) -> No
     assert body["long_silence_present"] is False
     assert body["technical_version"] == "1.0.0"
     assert body["technical_completed"] is True
+
+
+def test_get_acoustic(api_client: TestClient, audio_read: AudioAssetRead) -> None:
+    response = api_client.get(f"/api/v1/audio/{audio_read.id}/acoustic")
+    assert response.status_code == 200
+    body = response.json()["data"]
+    assert body["background_noise_present"] is True
+    assert body["background_noise_type"] == "TRAFFIC"
+    assert body["background_noise_severity"] == "LOW"
+    assert body["acoustic_version"] == "1.0.0"
+    assert body["acoustic_completed"] is True

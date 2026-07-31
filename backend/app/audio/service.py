@@ -15,6 +15,7 @@ from app.audio.schemas import (
     AudioMetadataRead,
     AudioSegmentsRead,
     AudioTechnicalRead,
+    AudioAcousticRead,
 )
 from app.config.settings import R2Settings
 from app.shared.storage.provider import StorageProvider
@@ -119,4 +120,19 @@ class AudioQueryService:
             long_silence_present=bool(payload.get("long_silence_present") or False),
             technical_version=asset.technical_version,
             technical_completed=asset.technical_completed,
+        )
+
+    async def get_acoustic(self, audio_id: UUID) -> AudioAcousticRead:
+        asset = await self._assets.find_by_id(audio_id)
+        if asset is None:
+            raise AudioAssetNotFoundException(audio_id)
+
+        payload = dict(asset.acoustic_json or {})
+        return AudioAcousticRead(
+            audio_id=asset.id,
+            background_noise_present=bool(payload.get("background_noise_present") or False),
+            background_noise_type=str(payload.get("background_noise_type") or "NONE"),
+            background_noise_severity=str(payload.get("background_noise_severity") or "NONE"),
+            acoustic_version=asset.acoustic_version,
+            acoustic_completed=asset.acoustic_completed,
         )

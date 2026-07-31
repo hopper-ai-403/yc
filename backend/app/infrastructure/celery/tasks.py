@@ -308,6 +308,32 @@ async def _process_audio(
             "worker_id": worker_id,
         }
 
+    # Acoustic intelligence stage (background noise present/type/severity).
+    from app.ai.acoustic.exceptions import (
+        AcousticAnalysisException,
+        AcousticArtifactMissingException,
+    )
+    from app.ai.acoustic.factory import build_acoustic_service
+
+    try:
+        async def acoustic(session):  # type: ignore[no-untyped-def]
+            service = build_acoustic_service(session)
+            return await service.analyze_audio(audio_id)
+
+        await with_session(acoustic)
+    except AcousticArtifactMissingException as exc:
+        # Transient: analysis artifacts may not be readable yet; Celery retries.
+        raise TimeoutError(f"acoustic artifacts unavailable: {exc}") from None
+    except AcousticAnalysisException as exc:
+        await with_session(_mark_audio_failed(audio_id, job_id, worker_id, str(exc)))
+        return {
+            "audio_id": str(audio_id),
+            "status": "FAILED",
+            "error": str(exc),
+            "code": getattr(exc, "code", "ACOUSTIC_ANALYSIS_ERROR"),
+            "worker_id": worker_id,
+        }
+
     async def finish(session):  # type: ignore[no-untyped-def]
         service = build_job_service(session)
         if await service.is_cancelled(job_id):

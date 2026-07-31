@@ -71,6 +71,21 @@ class NoiseSeverity(str, Enum):
     HIGH = "HIGH"
 
 
+class NoiseType(str, Enum):
+    """Background noise category."""
+
+    NONE = "NONE"
+    OFFICE_CHATTER = "OFFICE_CHATTER"
+    TV = "TV"
+    TRAFFIC = "TRAFFIC"
+    MUSIC = "MUSIC"
+    WIND = "WIND"
+    STATIC = "STATIC"
+    KEYBOARD = "KEYBOARD"
+    MECHANICAL = "MECHANICAL"
+    OTHER = "OTHER"
+
+
 class AudioQuality(str, Enum):
     """Perceived audio quality class."""
 

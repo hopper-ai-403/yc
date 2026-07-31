@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends
 
 from app.audio.dependencies import get_audio_query_service
 from app.audio.schemas import (
+    AudioAcousticRead,
     AudioAnalysisRead,
     AudioAssetRead,
     AudioDownloadData,
@@ -98,3 +99,16 @@ async def get_audio_technical(
 ) -> SuccessResponse[AudioTechnicalRead]:
     data = await service.get_technical(audio_id)
     return SuccessResponse(message="Audio technical results retrieved", data=data)
+
+
+@router.get(
+    "/audio/{audio_id}/acoustic",
+    response_model=SuccessResponse[AudioAcousticRead],
+    summary="Get acoustic intelligence results for an audio asset",
+)
+async def get_audio_acoustic(
+    audio_id: UUID,
+    service: AudioQueryService = Depends(get_audio_query_service),
+) -> SuccessResponse[AudioAcousticRead]:
+    data = await service.get_acoustic(audio_id)
+    return SuccessResponse(message="Audio acoustic results retrieved", data=data)

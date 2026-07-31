@@ -96,6 +96,17 @@ class AudioRepository(ABC):
     ) -> AudioAsset | None:
         """Persist technical intelligence outputs onto the asset."""
 
+    @abstractmethod
+    async def save_acoustic_result(
+        self,
+        asset_id: UUID,
+        *,
+        acoustic_version: str,
+        acoustic_json: dict[str, Any],
+        acoustic_completed_at: datetime,
+    ) -> AudioAsset | None:
+        """Persist acoustic intelligence outputs onto the asset."""
+
 
 class SqlAlchemyAudioBatchRepository(AudioBatchRepository):
     """SQLAlchemy-backed AudioBatchRepository."""
@@ -246,6 +257,25 @@ class SqlAlchemyAudioRepository(AudioRepository):
         asset.technical_json = dict(technical_json)
         asset.technical_completed = True
         asset.technical_completed_at = technical_completed_at
+        await self._session.flush()
+        await self._session.refresh(asset)
+        return asset
+
+    async def save_acoustic_result(
+        self,
+        asset_id: UUID,
+        *,
+        acoustic_version: str,
+        acoustic_json: dict[str, Any],
+        acoustic_completed_at: datetime,
+    ) -> AudioAsset | None:
+        asset = await self.find_by_id(asset_id)
+        if asset is None:
+            return None
+        asset.acoustic_version = acoustic_version
+        asset.acoustic_json = dict(acoustic_json)
+        asset.acoustic_completed = True
+        asset.acoustic_completed_at = acoustic_completed_at
         await self._session.flush()
         await self._session.refresh(asset)
         return asset

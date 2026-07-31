@@ -83,6 +83,17 @@ class AudioTechnicalRead(BaseModel):
     technical_completed: bool
 
 
+class AudioAcousticRead(BaseModel):
+    """Acoustic intelligence response payload."""
+
+    audio_id: UUID
+    background_noise_present: bool
+    background_noise_type: str
+    background_noise_severity: str
+    acoustic_version: str | None = None
+    acoustic_completed: bool
+
+
 class AudioSegmentsRead(BaseModel):
     """Speech / silence segmentation subset."""
 
