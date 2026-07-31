@@ -1,9 +1,9 @@
 """Audio management feature module.
 
-Purpose: Audio batch and asset persistence.
-Responsibilities: Batch/asset models and repositories.
-Dependencies: auth, shared.database, shared.domain.
-Extension points: Upload pipeline, validation services.
+Purpose: Audio batch/asset persistence, query API, and preprocessing.
+Responsibilities: Models, repositories, read API, preprocessing pipeline.
+Dependencies: auth, shared.database, shared.domain, storage, ffmpeg.
+Extension points: AI inference stages after preprocessing.
 """
 
 from app.audio.models import AudioAsset, AudioBatch

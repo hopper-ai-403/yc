@@ -202,6 +202,48 @@ class JobSettings(BaseSettings):
     progress_ttl_seconds: int = 86_400
 
 
+class PreprocessingSettings(BaseSettings):
+    """Audio preprocessing / ffmpeg settings."""
+
+    model_config = SettingsConfigDict(env_prefix="PREPROCESS_", extra="ignore")
+
+    ffmpeg_path: str | None = None
+    ffprobe_path: str | None = None
+    ffmpeg_timeout_seconds: int = 120
+    ffprobe_timeout_seconds: int = 30
+    target_sample_rate: int = 16_000
+    target_channels: int = 1
+    target_lufs: float = -23.0
+    target_true_peak_db: float = -1.5
+    loudness_range: float = 11.0
+    trim_silence: bool = True
+    silence_threshold_db: float = -50.0
+    silence_min_duration_seconds: float = 0.1
+    allowed_codecs: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: [
+            "pcm_s16le",
+            "pcm_s24le",
+            "pcm_s32le",
+            "pcm_f32le",
+            "pcm_u8",
+            "pcm_mulaw",
+            "pcm_alaw",
+            "flac",
+            "mp3",
+            "aac",
+            "vorbis",
+            "opus",
+        ]
+    )
+
+    @field_validator("allowed_codecs", mode="before")
+    @classmethod
+    def parse_allowed_codecs(cls, value: object) -> object:
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value
+
+
 class Settings(BaseSettings):
     """Root settings aggregating all configuration domains."""
 
@@ -221,6 +263,7 @@ class Settings(BaseSettings):
     ai: AISettings = Field(default_factory=AISettings)
     celery: CelerySettings = Field(default_factory=CelerySettings)
     jobs: JobSettings = Field(default_factory=JobSettings)
+    preprocessing: PreprocessingSettings = Field(default_factory=PreprocessingSettings)
 
 
 @lru_cache

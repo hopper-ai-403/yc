@@ -14,6 +14,7 @@ from uuid import UUID
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     DateTime,
     Float,
     ForeignKey,
@@ -21,7 +22,7 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.shared.database.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -102,6 +103,20 @@ class AudioAsset(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         default=AudioStatus.UPLOADED,
         index=True,
     )
+    is_preprocessed: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+    )
+    normalized_storage_key: Mapped[str | None] = mapped_column(
+        String(1024),
+        nullable=True,
+    )
+    preprocessed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    metadata_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     batch: Mapped[AudioBatch] = relationship(back_populates="assets", lazy="joined")
     prediction: Mapped[Prediction | None] = relationship(

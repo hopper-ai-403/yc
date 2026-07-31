@@ -1,9 +1,9 @@
-"""Celery tasks for job orchestration (no AI inference).
+"""Celery tasks for job orchestration and audio preprocessing (no AI inference).
 
-Purpose: Drive asynchronous batch and per-audio lifecycle.
-Responsibilities: process_batch, process_audio, finalize, heartbeat.
-Dependencies: JobService, Redis progress cache, async DB session.
-Extension points: Replace simulated sleep with preprocess/infer stages.
+Purpose: Drive asynchronous batch lifecycle and preprocessing pipeline.
+Responsibilities: process_batch, process_audio (→ preprocess), finalize, heartbeat.
+Dependencies: JobService, PreprocessingService, Redis progress cache, async DB session.
+Extension points: Replace preprocess with preprocess → infer → aggregate.
 """
 
 from __future__ import annotations
@@ -108,7 +108,7 @@ def process_batch(self: Any, job_id: str) -> dict[str, Any]:
     retry_jitter=True,
 )
 def process_audio(self: Any, audio_id: str, job_id: str) -> dict[str, Any]:
-    """Process a single audio asset (simulated sleep; no AI)."""
+    """Process a single audio asset via the preprocessing pipeline (no AI)."""
     worker = _worker_id(self)
     return run_async(_process_audio(UUID(audio_id), UUID(job_id), worker))
 
@@ -125,7 +125,6 @@ async def _process_audio(
     job_id: UUID,
     worker_id: str,
 ) -> dict[str, Any]:
-    settings = get_settings().jobs
     started = time.perf_counter()
 
     async def begin(session):  # type: ignore[no-untyped-def]
@@ -209,7 +208,42 @@ async def _process_audio(
     if begin_result["done"]:
         return begin_result["payload"]
 
-    time.sleep(settings.simulate_processing_ms / 1000.0)
+    # Preprocessing stage (no AI). Transient errors re-raised for Celery retry.
+    from app.audio.preprocessing.exceptions import (
+        AudioValidationException,
+        InvalidMetadataException,
+        PreprocessingException,
+        PreprocessingTimeoutException,
+    )
+    from app.audio.preprocessing.factory import build_preprocessing_service
+
+    try:
+        async def preprocess(session):  # type: ignore[no-untyped-def]
+            service = build_preprocessing_service(session)
+            return await service.preprocess_audio(audio_id)
+
+        await with_session(preprocess)
+    except PreprocessingTimeoutException:
+        raise TimeoutError("preprocessing timed out") from None
+    except (AudioValidationException, InvalidMetadataException) as exc:
+        await with_session(_mark_audio_failed(audio_id, job_id, worker_id, str(exc)))
+        return {
+            "audio_id": str(audio_id),
+            "status": "FAILED",
+            "error": str(exc),
+            "worker_id": worker_id,
+        }
+    except PreprocessingException as exc:
+        # Storage / ffmpeg failures: mark failed for this attempt; Celery may retry
+        # ConnectionError/TimeoutError only. Non-transient preprocessing errors fail asset.
+        await with_session(_mark_audio_failed(audio_id, job_id, worker_id, str(exc)))
+        return {
+            "audio_id": str(audio_id),
+            "status": "FAILED",
+            "error": str(exc),
+            "code": getattr(exc, "code", "PREPROCESSING_ERROR"),
+            "worker_id": worker_id,
+        }
 
     async def finish(session):  # type: ignore[no-untyped-def]
         service = build_job_service(session)
@@ -253,6 +287,42 @@ async def _process_audio(
         }
 
     return await with_session(finish)
+
+
+def _mark_audio_failed(
+    audio_id: UUID,
+    job_id: UUID,
+    worker_id: str,
+    error_message: str,
+):  # type: ignore[no-untyped-def]
+    async def handler(session):  # type: ignore[no-untyped-def]
+        service = build_job_service(session)
+        status = await service.get_audio_status(audio_id)
+        if status is not None and status is not AudioStatus.FAILED:
+            try:
+                await service.transition_audio(
+                    audio_id,
+                    AudioStatus.FAILED,
+                    job_id=job_id,
+                    worker_id=worker_id,
+                )
+            except Exception:
+                logger.exception(
+                    "audio_fail_transition_error",
+                    audio_id=str(audio_id),
+                    job_id=str(job_id),
+                )
+        logger.error(
+            "audio_preprocessing_failed",
+            audio_id=str(audio_id),
+            job_id=str(job_id),
+            worker_id=worker_id,
+            error=error_message,
+            status="FAILED",
+        )
+        return None
+
+    return handler
 
 
 async def _finalize_job(

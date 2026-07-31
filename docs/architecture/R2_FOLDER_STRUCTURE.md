@@ -10,26 +10,23 @@ Bucket: configured via `R2_BUCKET_NAME` (example: `ycaudiointelligence`)
         call-001.wav
         call-002.mp3
         call-003.ogg
+      normalized/
+        {audio_id}.wav
+      metadata/
+        {audio_id}.json
 ```
 
-## Key format
+## Key formats
 
 ```text
 uploads/{batch_id}/original/{filename}
+uploads/{batch_id}/normalized/{audio_id}.wav
+uploads/{batch_id}/metadata/{audio_id}.json
 ```
 
 ## Rules
 
-- Only original uploaded media is stored in Sprint 2
-- Filenames are basename-sanitized (no directories)
-- Object metadata includes `checksum_sha256` and `batch_id`
-- Future sprints may add:
-
-```text
-uploads/{batch_id}/
-  original/
-  processed/
-  derivatives/
-```
-
-without changing the original key layout.
+- Original keys are immutable after upload
+- Normalized audio is always PCM WAV 16 kHz mono 16-bit
+- Metadata JSON mirrors `AudioTechnicalMetadata`
+- Object metadata includes `audio_id`, `batch_id`, and `stage`

@@ -78,11 +78,13 @@ def create_application() -> FastAPI:
 
     application.include_router(health_router)
 
+    from app.audio.api import router as audio_router
     from app.jobs.api import router as jobs_router
     from app.upload.api import router as upload_router
 
     application.include_router(upload_router)
     application.include_router(jobs_router)
+    application.include_router(audio_router)
 
     return application
 

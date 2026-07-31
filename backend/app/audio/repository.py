@@ -1,6 +1,8 @@
 """Audio batch and asset repository contracts and SQLAlchemy implementations."""
 
 from abc import ABC, abstractmethod
+from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
@@ -55,6 +57,21 @@ class AudioRepository(ABC):
         status: AudioStatus,
     ) -> AudioAsset | None:
         """Update processing status for an asset."""
+
+    @abstractmethod
+    async def save_preprocessing_result(
+        self,
+        asset_id: UUID,
+        *,
+        duration: float,
+        sample_rate: int,
+        channels: int,
+        normalized_storage_key: str,
+        metadata_json: dict[str, Any],
+        metadata_storage_key: str,
+        preprocessed_at: datetime,
+    ) -> AudioAsset | None:
+        """Persist preprocessing outputs onto the asset."""
 
 
 class SqlAlchemyAudioBatchRepository(AudioBatchRepository):
@@ -138,6 +155,34 @@ class SqlAlchemyAudioRepository(AudioRepository):
         if asset is None:
             return None
         asset.processing_status = status
+        await self._session.flush()
+        await self._session.refresh(asset)
+        return asset
+
+    async def save_preprocessing_result(
+        self,
+        asset_id: UUID,
+        *,
+        duration: float,
+        sample_rate: int,
+        channels: int,
+        normalized_storage_key: str,
+        metadata_json: dict[str, Any],
+        metadata_storage_key: str,
+        preprocessed_at: datetime,
+    ) -> AudioAsset | None:
+        asset = await self.find_by_id(asset_id)
+        if asset is None:
+            return None
+        payload = dict(metadata_json)
+        payload["metadata_storage_key"] = metadata_storage_key
+        asset.duration = duration
+        asset.sample_rate = sample_rate
+        asset.channels = channels
+        asset.normalized_storage_key = normalized_storage_key
+        asset.metadata_json = payload
+        asset.is_preprocessed = True
+        asset.preprocessed_at = preprocessed_at
         await self._session.flush()
         await self._session.refresh(asset)
         return asset
