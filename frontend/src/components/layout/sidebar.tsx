@@ -13,9 +13,11 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { APP_NAME, ROUTES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/stores/ui-store";
@@ -56,6 +58,12 @@ export function Sidebar() {
   const pathname = usePathname();
   const collapsed = useUiStore((state) => state.sidebarCollapsed);
   const toggleSidebar = useUiStore((state) => state.toggleSidebar);
+  const setSidebarCollapsed = useUiStore((state) => state.setSidebarCollapsed);
+  const compact = useMediaQuery("(max-width: 1024px)");
+
+  useEffect(() => {
+    setSidebarCollapsed(compact);
+  }, [compact, setSidebarCollapsed]);
 
   return (
     <aside

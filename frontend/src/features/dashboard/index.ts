@@ -1,10 +1,10 @@
-import { jobsApi } from "@/services/batch";
-import { systemApi } from "@/services/system";
-import { createQueryKeys } from "@/features/shared/query-keys";
-
-export const dashboardKeys = {
-  jobs: createQueryKeys("jobs"),
-  system: createQueryKeys("system"),
-};
-
-export { jobsApi, systemApi };
+export {
+  useBackendHealth,
+  useBatchMetricsForJobs,
+  useJobsList,
+  useSystemMetrics,
+  jobsKeys,
+  metricsKeys,
+  systemKeys,
+} from "./api";
+export { DashboardView } from "./components/dashboard-view";

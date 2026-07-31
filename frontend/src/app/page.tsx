@@ -1,12 +1,5 @@
-import { PageContainer, PageHeader } from "@/components/layout";
+import { DashboardView } from "@/features/dashboard";
 
 export default function DashboardPage() {
-  return (
-    <PageContainer>
-      <PageHeader
-        title="Dashboard"
-        description="Platform overview. Feature surfaces are under construction."
-      />
-    </PageContainer>
-  );
+  return <DashboardView />;
 }
