@@ -2,7 +2,7 @@
 
 import {
   Activity,
-  FileAudio,
+  ClipboardCheck,
   FolderKanban,
   Gauge,
   LayoutDashboard,
@@ -36,15 +36,15 @@ const NAV_ITEMS: NavItem[] = [
     href: ROUTES.batches,
     label: "Batches",
     icon: FolderKanban,
-    match: (path) => path.startsWith("/batches"),
-  },
-  {
-    href: ROUTES.batches,
-    label: "Audio",
-    icon: FileAudio,
-    match: (path) => path.startsWith("/audio"),
+    match: (path) => path.startsWith("/batches") || path.startsWith("/audio"),
   },
   { href: ROUTES.benchmark, label: "Benchmark", icon: Gauge },
+  {
+    href: ROUTES.evaluation,
+    label: "Evaluation",
+    icon: ClipboardCheck,
+    match: (path) => path.startsWith("/evaluation"),
+  },
   { href: ROUTES.system, label: "System", icon: Activity },
 ];
 

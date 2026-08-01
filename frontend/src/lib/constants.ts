@@ -7,8 +7,22 @@ export const ROUTES = {
   batchDetail: (id: string) => `/batches/${id}`,
   audioDetail: (id: string) => `/audio/${id}`,
   benchmark: "/benchmark",
+  evaluation: "/evaluation",
   system: "/system",
 } as const;
+
+/** Assessment fields used by exports and evaluation comparisons. */
+export const ASSESSMENT_FIELDS = [
+  "emotional_tone",
+  "emotional_intensity",
+  "background_noise_present",
+  "background_noise_type",
+  "background_noise_severity",
+  "audio_quality",
+  "speaker_overlap_present",
+  "long_silence_present",
+  "confidence",
+] as const;
 
 export const QUERY_STALE_TIME_MS = 15_000;
 export const QUERY_GC_TIME_MS = 5 * 60_000;
