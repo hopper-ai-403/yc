@@ -10,6 +10,8 @@ export { LoadingBlock, LoadingSpinner } from "./loading-spinner";
 export { MetricCard } from "./metric-card";
 export { Pagination } from "./pagination";
 export { ProgressBar } from "./progress-bar";
+export { QuickActions, ShortcutHint } from "./quick-actions";
+export type { QuickAction } from "./quick-actions";
 export { SearchInput } from "./search-input";
 export { StatusBadge } from "./status-badge";
 export { Timeline } from "./timeline";

@@ -1,14 +1,16 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Eye } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 
 import {
   EmptyState,
+  EmptyStateAction,
   ProgressBar,
   StatusBadge,
 } from "@/components/common";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExportButtons } from "@/features/shared/export-actions";
@@ -18,6 +20,7 @@ import {
   formatDurationMs,
   formatRelativeTime,
 } from "@/lib/format";
+import { useUiStore } from "@/stores/ui-store";
 import type { BatchMetricsRead, JobRead } from "@/types/domain";
 
 function jobDurationMs(job: JobRead): number | null {
@@ -49,6 +52,8 @@ export function RecentBatchesTable({
   onExportCsv,
   onExportJson,
 }: RecentBatchesTableProps) {
+  const openDrawer = useUiStore((s) => s.openDrawer);
+
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0">
@@ -59,6 +64,9 @@ export function RecentBatchesTable({
         >
           View all
           <ArrowRight className="size-3" />
+          <kbd className="ml-1 rounded border border-border px-1 font-mono text-[10px]">
+            B
+          </kbd>
         </Link>
       </CardHeader>
       <CardContent className="p-0">
@@ -70,13 +78,9 @@ export function RecentBatchesTable({
               title="No batches yet"
               description="Upload a ZIP of call recordings to run your first analysis batch."
               action={
-                <Link
-                  href={ROUTES.upload}
-                  className="inline-flex h-8 items-center justify-center gap-2 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-                >
-                  Upload audio
-                </Link>
+                <EmptyStateAction label="Upload audio" href={ROUTES.upload} />
               }
+              hint="Press U · or Ctrl+K to search"
             />
           </div>
         ) : (
@@ -144,6 +148,21 @@ export function RecentBatchesTable({
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            aria-label="Preview batch"
+                            title="Preview"
+                            onClick={() =>
+                              openDrawer({
+                                kind: "batch",
+                                id: job.batch_id,
+                                title: `Batch ${shortId(job.batch_id)}`,
+                              })
+                            }
+                          >
+                            <Eye />
+                          </Button>
                           <Link
                             href={ROUTES.batchDetail(job.batch_id)}
                             aria-label="Open batch"
@@ -174,7 +193,11 @@ export function RecentBatchesTable({
 
 function TableSkeleton({ rows }: { rows: number }) {
   return (
-    <div className="space-y-2 p-4" aria-busy="true" aria-label="Loading batches">
+    <div
+      className="space-y-2 p-4"
+      aria-busy="true"
+      aria-label="Loading batches"
+    >
       {Array.from({ length: rows }, (_, index) => (
         <Skeleton key={index} className="h-10 w-full" />
       ))}

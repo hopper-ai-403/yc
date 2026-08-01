@@ -1,22 +1,22 @@
 "use client";
 
-import { Download, RefreshCw } from "lucide-react";
+import { Download, RefreshCw, Upload } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
 
 import {
   EmptyState,
+  EmptyStateAction,
   ErrorState,
   FilterBar,
+  QuickActions,
   SearchInput,
 } from "@/components/common";
 import { PageContainer, PageHeader } from "@/components/layout";
-import { Button } from "@/components/ui/button";
-import { BatchSelector } from "@/features/benchmark/components/batch-selector";
 import {
   useBatchExportResults,
   useCompletedJobs,
 } from "@/features/benchmark/api";
+import { BatchSelector } from "@/features/benchmark/components/batch-selector";
 import { ComparisonTable } from "@/features/evaluation/components/comparison-table";
 import { ConfusionMatrix } from "@/features/evaluation/components/confusion-matrix";
 import { GroundTruthUploader } from "@/features/evaluation/components/ground-truth-uploader";
@@ -32,10 +32,10 @@ import {
   type RowComparison,
 } from "@/features/evaluation/lib/compare";
 import { useDebounce } from "@/hooks/use-debounce";
-import { downloadBlob, downloadJson } from "@/lib/download";
 import { ROUTES } from "@/lib/constants";
+import { downloadBlob, downloadJson } from "@/lib/download";
+import { notify } from "@/lib/notify";
 import type { BatchExportResultRow } from "@/types/domain";
-import Link from "next/link";
 
 type FilterMode = "mismatches" | "low_confidence" | "failed" | null;
 
@@ -118,7 +118,7 @@ export function EvaluationStudio() {
       new Blob([lines.join("\n")], { type: "text/csv" }),
       `evaluation-${batchId ?? "batch"}.csv`,
     );
-    toast.success("Comparison CSV downloaded");
+    notify.success("Comparison CSV downloaded");
   }
 
   function exportComparisonJson() {
@@ -131,7 +131,7 @@ export function EvaluationStudio() {
       },
       `evaluation-${batchId ?? "batch"}.json`,
     );
-    toast.success("Comparison JSON downloaded");
+    notify.success("Comparison JSON downloaded");
   }
 
   return (
@@ -140,37 +140,39 @@ export function EvaluationStudio() {
         title="Evaluation Studio"
         description="Compare expected assessment labels against pipeline predictions. Upload ground truth, pick a completed batch, inspect mismatches."
         actions={
-          <>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={!filtered.length}
-              onClick={exportComparisonCsv}
-            >
-              <Download />
-              CSV
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={!filtered.length}
-              onClick={exportComparisonJson}
-            >
-              <Download />
-              JSON
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => void actualQuery.refetch()}
-              disabled={!batchId || actualQuery.isFetching}
-              aria-label="Refresh predictions"
-            >
-              <RefreshCw
-                className={actualQuery.isFetching ? "animate-spin" : undefined}
-              />
-            </Button>
-          </>
+          <QuickActions
+            actions={[
+              {
+                id: "csv",
+                label: "Export CSV",
+                icon: Download,
+                disabled: !filtered.length,
+                onClick: exportComparisonCsv,
+              },
+              {
+                id: "json",
+                label: "Export JSON",
+                icon: Download,
+                disabled: !filtered.length,
+                onClick: exportComparisonJson,
+              },
+              {
+                id: "refresh",
+                label: "Refresh",
+                icon: RefreshCw,
+                shortcut: "R",
+                disabled: !batchId || actualQuery.isFetching,
+                onClick: () => void actualQuery.refetch(),
+              },
+              {
+                id: "upload",
+                label: "Upload",
+                icon: Upload,
+                href: ROUTES.upload,
+                shortcut: "U",
+              },
+            ]}
+          />
         }
       />
 
@@ -204,9 +206,9 @@ export function EvaluationStudio() {
             setExpected(rows);
             setSourceName(source);
             setSelected(null);
-            toast.success(`Loaded ${rows.length} expected labels`);
+            notify.success(`Loaded ${rows.length} expected labels`);
           }}
-          onError={(message) => toast.error(message)}
+          onError={(message) => notify.error(message)}
         />
       </div>
 
@@ -214,19 +216,15 @@ export function EvaluationStudio() {
         <EmptyState
           title="Waiting for ground truth"
           description="Upload an expected-label CSV or JSON to start comparing against the selected batch."
+          action={<EmptyStateAction label="Upload audio first" href={ROUTES.upload} />}
+          hint="Press E to return here"
         />
       ) : !actualQuery.data && !actualQuery.isLoading ? (
         <EmptyState
           title="Select a completed batch"
           description="Pick a batch with exported predictions to evaluate against."
-          action={
-            <Link
-              href={ROUTES.batches}
-              className="inline-flex h-8 items-center rounded-md border border-border px-3 text-xs"
-            >
-              Open batches
-            </Link>
-          }
+          action={<EmptyStateAction label="Open batches" href={ROUTES.batches} />}
+          hint="Press B for Batch Explorer"
         />
       ) : (
         <>

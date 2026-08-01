@@ -2,10 +2,10 @@
 
 import { FileJson, FileSpreadsheet } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { downloadBlob, downloadJson } from "@/lib/download";
+import { notify } from "@/lib/notify";
 import { downloadBatchCsv, getBatchExportJson } from "@/services/batch";
 import { ApiError } from "@/services/client";
 
@@ -19,10 +19,11 @@ export function useExportActions() {
     try {
       const blob = await downloadBatchCsv(batchId);
       downloadBlob(blob, `results-${batchId}.csv`);
-      toast.success("CSV export downloaded");
+      notify.exportSuccess("csv", batchId);
     } catch (error) {
-      toast.error(
+      notify.error(
         error instanceof ApiError ? error.message : "CSV export failed",
+        { id: key, onRetry: () => void exportCsv(batchId) },
       );
     } finally {
       setPending(null);
@@ -36,10 +37,11 @@ export function useExportActions() {
     try {
       const payload = await getBatchExportJson(batchId);
       downloadJson(payload, `results-${batchId}.json`);
-      toast.success("JSON export downloaded");
+      notify.exportSuccess("json", batchId);
     } catch (error) {
-      toast.error(
+      notify.error(
         error instanceof ApiError ? error.message : "JSON export failed",
+        { id: key, onRetry: () => void exportJson(batchId) },
       );
     } finally {
       setPending(null);

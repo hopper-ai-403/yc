@@ -1,20 +1,31 @@
 "use client";
 
-import { ArrowDown, ArrowUp, ArrowUpDown, FolderSearch } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Eye,
+  FolderSearch,
+  RefreshCw,
+  Upload,
+} from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 
 import {
   EmptyState,
+  EmptyStateAction,
   ErrorState,
   FilterBar,
   Pagination,
   ProgressBar,
+  QuickActions,
   SearchInput,
   StatusBadge,
 } from "@/components/common";
 import { PageContainer, PageHeader } from "@/components/layout";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -32,6 +43,7 @@ import {
   formatDurationMs,
 } from "@/lib/format";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useUiStore } from "@/stores/ui-store";
 import type { JobRead, JobStatus } from "@/types/domain";
 
 import { shortId } from "@/features/dashboard/components/recent-batches-table";
@@ -72,12 +84,21 @@ export function BatchExplorer() {
 
   const debouncedSearch = useDebounce(search, 250);
   const exports = useExportActions();
+  const openDrawer = useUiStore((s) => s.openDrawer);
 
   const jobsQuery = useJobsList({
     status: status ?? undefined,
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
   });
+
+  useEffect(() => {
+    function onRefresh() {
+      void jobsQuery.refetch();
+    }
+    window.addEventListener("aip:refresh", onRefresh);
+    return () => window.removeEventListener("aip:refresh", onRefresh);
+  }, [jobsQuery]);
 
   const items = useMemo(() => jobsQuery.data?.items ?? [], [jobsQuery.data]);
   const total = jobsQuery.data?.count ?? 0;
@@ -138,6 +159,28 @@ export function BatchExplorer() {
       <PageHeader
         title="Batch Explorer"
         description="Search, filter, and inspect every processing batch."
+        actions={
+          <QuickActions
+            actions={[
+              {
+                id: "refresh",
+                label: "Refresh",
+                icon: RefreshCw,
+                shortcut: "R",
+                disabled: jobsQuery.isFetching,
+                onClick: () => void jobsQuery.refetch(),
+              },
+              {
+                id: "upload",
+                label: "Upload",
+                icon: Upload,
+                href: ROUTES.upload,
+                variant: "default",
+                shortcut: "U",
+              },
+            ]}
+          />
+        }
       />
 
       <div className="flex flex-wrap items-center gap-2">
@@ -200,26 +243,19 @@ export function BatchExplorer() {
                 }
                 action={
                   debouncedSearch || status || dateFilter ? (
-                    <button
-                      type="button"
+                    <EmptyStateAction
+                      label="Clear filters"
                       onClick={() => {
                         setSearch("");
                         setStatus(null);
                         setDateFilter(null);
                       }}
-                      className="inline-flex h-8 items-center rounded-md border border-border px-3 text-xs font-medium transition-colors hover:bg-accent"
-                    >
-                      Clear filters
-                    </button>
+                    />
                   ) : (
-                    <Link
-                      href={ROUTES.upload}
-                      className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-                    >
-                      Upload audio
-                    </Link>
+                    <EmptyStateAction label="Upload audio" href={ROUTES.upload} />
                   )
                 }
+                hint="Press U to open Upload Studio"
               />
             </div>
           ) : (
@@ -311,6 +347,21 @@ export function BatchExplorer() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-1">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              aria-label="Preview batch"
+                              title="Preview"
+                              onClick={() =>
+                                openDrawer({
+                                  kind: "batch",
+                                  id: job.batch_id,
+                                  title: `Batch ${shortId(job.batch_id)}`,
+                                })
+                              }
+                            >
+                              <Eye />
+                            </Button>
                             <Link
                               href={ROUTES.batchDetail(job.batch_id)}
                               aria-label="Open batch"

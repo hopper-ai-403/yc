@@ -11,6 +11,7 @@ export const systemKeys = {
 };
 
 export { systemApi };
+export { SystemOverview } from "./system-overview";
 export type {
   ComponentHealth,
   ReadinessData,

@@ -1,7 +1,14 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
+import {
+  ArrowLeft,
+  Copy,
+  Eye,
+  Gauge,
+  RefreshCw,
+} from "lucide-react";
 import Link from "next/link";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import {
@@ -9,26 +16,36 @@ import {
   ErrorState,
   MetricCard,
   ProgressBar,
+  QuickActions,
   StatusBadge,
 } from "@/components/common";
 import { PageContainer, PageHeader } from "@/components/layout";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  jobsKeys,
-  metricsKeys,
-} from "@/features/dashboard/api";
+import { jobsKeys, metricsKeys } from "@/features/dashboard/api";
 import { ExportButtons, useExportActions } from "@/features/shared/export-actions";
+import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import { JOB_PROGRESS_REFETCH_MS, ROUTES } from "@/lib/constants";
 import {
   formatConfidence,
   formatDurationMs,
   formatPercent,
 } from "@/lib/format";
-import { getBatchExportJson, getBatchMetrics, getBatchStatus } from "@/services/batch";
+import { notify } from "@/lib/notify";
+import {
+  getBatchExportJson,
+  getBatchMetrics,
+  getBatchStatus,
+} from "@/services/batch";
+import { getBatchPredictions } from "@/services/prediction";
+import { useUiStore } from "@/stores/ui-store";
 import type { BatchExportJsonRead } from "@/types/domain";
 
 export function BatchDetailView({ batchId }: { batchId: string }) {
+  const openDrawer = useUiStore((s) => s.openDrawer);
+  const { copy } = useCopyToClipboard();
+
   const statusQuery = useQuery({
     queryKey: jobsKeys.list({ resource: "batch-status", batchId }),
     queryFn: () => getBatchStatus(batchId),
@@ -54,9 +71,27 @@ export function BatchDetailView({ batchId }: { batchId: string }) {
     enabled: statusQuery.data?.status === "COMPLETED",
   });
 
+  const predictionsQuery = useQuery({
+    queryKey: ["predictions", "batch", batchId],
+    queryFn: () => getBatchPredictions(batchId),
+    retry: false,
+    enabled: statusQuery.data?.status === "COMPLETED",
+  });
+
   const exports = useExportActions();
   const status = statusQuery.data;
   const metrics = metricsQuery.data;
+
+  useEffect(() => {
+    function onRefresh() {
+      void statusQuery.refetch();
+      void metricsQuery.refetch();
+      void resultsQuery.refetch();
+      void predictionsQuery.refetch();
+    }
+    window.addEventListener("aip:refresh", onRefresh);
+    return () => window.removeEventListener("aip:refresh", onRefresh);
+  }, [statusQuery, metricsQuery, resultsQuery, predictionsQuery]);
 
   return (
     <PageContainer>
@@ -64,22 +99,56 @@ export function BatchDetailView({ batchId }: { batchId: string }) {
         title="Batch Detail"
         description={`Batch ${batchId}`}
         actions={
-          <ExportButtons
-            batchId={batchId}
-            pending={exports.pending}
-            onCsv={exports.exportCsv}
-            onJson={exports.exportJson}
+          <QuickActions
+            actions={[
+              {
+                id: "copy",
+                label: "Copy ID",
+                icon: Copy,
+                onClick: () => {
+                  void copy(batchId).then((ok) => {
+                    if (ok) notify.success("Batch ID copied");
+                  });
+                },
+              },
+              {
+                id: "refresh",
+                label: "Refresh",
+                icon: RefreshCw,
+                shortcut: "R",
+                disabled: statusQuery.isFetching,
+                onClick: () => void statusQuery.refetch(),
+              },
+              {
+                id: "benchmark",
+                label: "Benchmark",
+                icon: Gauge,
+                href: `${ROUTES.benchmark}?batch=${batchId}`,
+                shortcut: "G",
+              },
+            ]}
           />
         }
       />
 
-      <Link
-        href={ROUTES.batches}
-        className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="size-3" />
-        All batches
-      </Link>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Link
+          href={ROUTES.batches}
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="size-3" />
+          All batches
+          <kbd className="ml-1 rounded border border-border px-1 font-mono text-[10px]">
+            B
+          </kbd>
+        </Link>
+        <ExportButtons
+          batchId={batchId}
+          pending={exports.pending}
+          onCsv={exports.exportCsv}
+          onJson={exports.exportJson}
+        />
+      </div>
 
       {statusQuery.isError ? (
         <ErrorState
@@ -150,7 +219,7 @@ export function BatchDetailView({ batchId }: { batchId: string }) {
               <CardTitle>Results</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              {resultsQuery.isLoading ? (
+              {resultsQuery.isLoading || predictionsQuery.isLoading ? (
                 <div className="space-y-2 p-4" aria-busy="true">
                   {Array.from({ length: 3 }, (_, index) => (
                     <Skeleton key={index} className="h-8 w-full" />
@@ -169,36 +238,80 @@ export function BatchDetailView({ batchId }: { batchId: string }) {
                         <th className="px-4 py-2.5 text-right font-medium">
                           Confidence
                         </th>
+                        <th className="px-4 py-2.5 text-right font-medium">
+                          Actions
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {resultsQuery.data.results.map((row) => (
-                        <tr
-                          key={row.filename}
-                          className="border-b border-border/60 last:border-0"
-                        >
-                          <td className="max-w-56 truncate px-4 py-2.5 font-mono text-xs">
-                            {row.filename}
-                          </td>
-                          <td className="px-4 py-2.5 text-xs">
-                            {row.result.emotional_tone}
-                          </td>
-                          <td className="px-4 py-2.5 text-xs text-muted-foreground">
-                            {row.result.emotional_intensity}
-                          </td>
-                          <td className="px-4 py-2.5 text-xs text-muted-foreground">
-                            {row.result.background_noise_present
-                              ? row.result.background_noise_type
-                              : "NONE"}
-                          </td>
-                          <td className="px-4 py-2.5 text-xs text-muted-foreground">
-                            {row.result.audio_quality}
-                          </td>
-                          <td className="px-4 py-2.5 text-right font-mono text-xs tabular-nums">
-                            {formatConfidence(row.result.confidence)}
-                          </td>
-                        </tr>
-                      ))}
+                      {resultsQuery.data.results.map((row, index) => {
+                        const prediction =
+                          predictionsQuery.data?.predictions[index];
+                        const audioId = prediction?.audio_id;
+                        return (
+                          <tr
+                            key={row.filename}
+                            className="border-b border-border/60 last:border-0 hover:bg-accent/30"
+                          >
+                            <td className="max-w-56 truncate px-4 py-2.5 font-mono text-xs">
+                              {row.filename}
+                            </td>
+                            <td className="px-4 py-2.5 text-xs">
+                              {row.result.emotional_tone}
+                            </td>
+                            <td className="px-4 py-2.5 text-xs text-muted-foreground">
+                              {row.result.emotional_intensity}
+                            </td>
+                            <td className="px-4 py-2.5 text-xs text-muted-foreground">
+                              {row.result.background_noise_present
+                                ? row.result.background_noise_type
+                                : "NONE"}
+                            </td>
+                            <td className="px-4 py-2.5 text-xs text-muted-foreground">
+                              {row.result.audio_quality}
+                            </td>
+                            <td className="px-4 py-2.5 text-right font-mono text-xs tabular-nums">
+                              {formatConfidence(row.result.confidence)}
+                            </td>
+                            <td className="px-4 py-2.5">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  aria-label="Preview prediction"
+                                  onClick={() => {
+                                    if (audioId) {
+                                      openDrawer({
+                                        kind: "prediction",
+                                        id: audioId,
+                                        title: row.filename,
+                                      });
+                                    } else {
+                                      openDrawer({
+                                        kind: "artifact",
+                                        id: row.filename,
+                                        title: row.filename,
+                                        data: {
+                                          ...row.result,
+                                        } as unknown as Record<string, unknown>,
+                                      });
+                                    }
+                                  }}
+                                >
+                                  <Eye />
+                                </Button>
+                                {audioId ? (
+                                  <Link href={ROUTES.audioDetail(audioId)}>
+                                    <Button size="sm" variant="outline">
+                                      Open
+                                    </Button>
+                                  </Link>
+                                ) : null}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -206,7 +319,12 @@ export function BatchDetailView({ batchId }: { batchId: string }) {
                 <div className="p-4">
                   <EmptyState
                     title="No results yet"
-                    description="Results appear once the batch finishes processing."
+                    description={
+                      status.status === "RUNNING" || status.status === "QUEUED"
+                        ? "This batch is still processing. Results will appear automatically."
+                        : "Results appear once the batch finishes processing."
+                    }
+                    hint="Polling stops when the job completes"
                   />
                 </div>
               )}

@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-import { EmptyState, ErrorState } from "@/components/common";
+import { EmptyState, EmptyStateAction, ErrorState, QuickActions } from "@/components/common";
 import { PageContainer, PageHeader } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,7 +34,7 @@ import {
   formatPercent,
 } from "@/lib/format";
 import { ROUTES } from "@/lib/constants";
-import Link from "next/link";
+import { RefreshCw, Upload } from "lucide-react";
 
 const LatencyStackedChart = dynamic(
   () =>
@@ -127,6 +127,32 @@ export function BenchmarkDashboard() {
       <PageHeader
         title="Benchmark Dashboard"
         description="Latency percentiles, throughput, confidence, and prediction distributions for completed evaluation batches."
+        actions={
+          <QuickActions
+            actions={[
+              {
+                id: "refresh",
+                label: "Refresh",
+                icon: RefreshCw,
+                shortcut: "R",
+                disabled: jobsQuery.isFetching || benchmarkQuery.isFetching,
+                onClick: () => {
+                  void jobsQuery.refetch();
+                  void benchmarkQuery.refetch();
+                  void exportQuery.refetch();
+                },
+              },
+              {
+                id: "upload",
+                label: "Upload",
+                icon: Upload,
+                href: ROUTES.upload,
+                variant: "default",
+                shortcut: "U",
+              },
+            ]}
+          />
+        }
       />
 
       <div className="space-y-2">
@@ -149,14 +175,11 @@ export function BenchmarkDashboard() {
         <EmptyState
           title="No completed batches"
           description="Upload audio and finish a batch to generate benchmark reports."
-          action={
-            <Link
-              href={ROUTES.upload}
-              className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground"
-            >
-              Upload audio
-            </Link>
+          action={<EmptyStateAction label="Upload audio" href={ROUTES.upload} />}
+          secondaryAction={
+            <EmptyStateAction label="View batches" href={ROUTES.batches} />
           }
+          hint="Press G anytime to return here"
         />
       ) : (
         <>

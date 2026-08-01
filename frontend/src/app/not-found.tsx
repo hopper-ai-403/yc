@@ -1,9 +1,9 @@
-import { FileQuestion } from "lucide-react";
-import Link from "next/link";
+"use client";
 
-import { EmptyState } from "@/components/common/empty-state";
+import { FileQuestion } from "lucide-react";
+
+import { EmptyState, EmptyStateAction } from "@/components/common/empty-state";
 import { PageContainer } from "@/components/layout";
-import { buttonVariants } from "@/components/ui/button";
 import { ROUTES } from "@/lib/constants";
 
 export default function NotFound() {
@@ -14,10 +14,9 @@ export default function NotFound() {
         title="404 — Page not found"
         description="The page you are looking for does not exist or has been moved."
         action={
-          <Link href={ROUTES.dashboard} className={buttonVariants({ size: "sm", variant: "outline" })}>
-            Return to dashboard
-          </Link>
+          <EmptyStateAction label="Return to dashboard" href={ROUTES.dashboard} />
         }
+        hint="Ctrl+K to search pages and batches"
       />
     </PageContainer>
   );

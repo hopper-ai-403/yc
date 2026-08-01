@@ -1,18 +1,32 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { useState } from "react";
+import {
+  ArrowLeft,
+  Copy,
+  Eye,
+  Gauge,
+  RefreshCw,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
+import { QuickActions } from "@/components/common/quick-actions";
 import { StatusBadge } from "@/components/common/status-badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import { ROUTES } from "@/lib/constants";
+import { notify } from "@/lib/notify";
+import { useUiStore } from "@/stores/ui-store";
 
-import { useAudioAsset, useAudioAcoustic, useAudioPrediction, useAudioSpeech, useAudioTechnical } from "../api";
+import {
+  useAudioAsset,
+  useAudioAcoustic,
+  useAudioPrediction,
+  useAudioSpeech,
+  useAudioTechnical,
+} from "../api";
 import { ArtifactsPanel } from "./artifacts-panel";
 import {
   AcousticIntelligenceCard,
@@ -28,11 +42,25 @@ import { ConfidencePanel, TimingPanel } from "./timing-panel";
 
 export function AudioExplorer({ audioId }: { audioId: string }) {
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("prediction");
+  const openDrawer = useUiStore((s) => s.openDrawer);
+  const { copy } = useCopyToClipboard();
   const asset = useAudioAsset(audioId);
   const technical = useAudioTechnical(audioId);
   const acoustic = useAudioAcoustic(audioId);
   const speech = useAudioSpeech(audioId);
   const prediction = useAudioPrediction(audioId);
+
+  useEffect(() => {
+    function onRefresh() {
+      void asset.refetch();
+      void technical.refetch();
+      void acoustic.refetch();
+      void speech.refetch();
+      void prediction.refetch();
+    }
+    window.addEventListener("aip:refresh", onRefresh);
+    return () => window.removeEventListener("aip:refresh", onRefresh);
+  }, [asset, technical, acoustic, speech, prediction]);
 
   if (asset.isError) {
     return (
@@ -56,15 +84,67 @@ export function AudioExplorer({ audioId }: { audioId: string }) {
           asset.data ? (
             <>
               <StatusBadge status={asset.data.processing_status} />
-              <Link href={ROUTES.batchDetail(asset.data.batch_id)}>
-                <Button variant="outline" size="sm">
-                  <ArrowLeft />
-                  Batch
-                </Button>
-              </Link>
+              <QuickActions
+                actions={[
+                  {
+                    id: "prediction",
+                    label: "Prediction",
+                    icon: Eye,
+                    onClick: () =>
+                      openDrawer({
+                        kind: "prediction",
+                        id: audioId,
+                        title: asset.data?.filename,
+                      }),
+                  },
+                  {
+                    id: "metadata",
+                    label: "Metadata",
+                    icon: Eye,
+                    onClick: () =>
+                      openDrawer({
+                        kind: "metadata",
+                        id: audioId,
+                        title: asset.data?.filename,
+                      }),
+                  },
+                  {
+                    id: "copy",
+                    label: "Copy ID",
+                    icon: Copy,
+                    onClick: () => {
+                      void copy(audioId).then((ok) => {
+                        if (ok) notify.success("Audio ID copied");
+                      });
+                    },
+                  },
+                  {
+                    id: "refresh",
+                    label: "Refresh",
+                    icon: RefreshCw,
+                    shortcut: "R",
+                    disabled: asset.isFetching,
+                    onClick: () => void asset.refetch(),
+                  },
+                  {
+                    id: "benchmark",
+                    label: "Benchmark",
+                    icon: Gauge,
+                    href: `${ROUTES.benchmark}?batch=${asset.data.batch_id}`,
+                    shortcut: "G",
+                  },
+                  {
+                    id: "batch",
+                    label: "Batch",
+                    icon: ArrowLeft,
+                    href: ROUTES.batchDetail(asset.data.batch_id),
+                    shortcut: "B",
+                  },
+                ]}
+              />
             </>
           ) : (
-            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-8 w-48" />
           )
         }
       />

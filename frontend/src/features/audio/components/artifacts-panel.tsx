@@ -1,10 +1,11 @@
 "use client";
 
-import { Download, ExternalLink, FileAudio, FileJson } from "lucide-react";
+import { Download, ExternalLink, Eye, FileAudio, FileJson } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { downloadJson } from "@/lib/download";
+import { useUiStore } from "@/stores/ui-store";
 
 import {
   useAudioAcoustic,
@@ -42,6 +43,7 @@ export function ArtifactsPanel({
   const acoustic = useAudioAcoustic(audioId);
   const speech = useAudioSpeech(audioId);
   const prediction = useAudioPrediction(audioId);
+  const openDrawer = useUiStore((s) => s.openDrawer);
 
   const openDownloadUrl = () => {
     if (download.data) window.open(download.data.url, "_blank", "noopener");
@@ -142,9 +144,7 @@ export function ArtifactsPanel({
                         <Button
                           size="icon"
                           variant="ghost"
-                          disabled={
-                            !row.available || !download.data
-                          }
+                          disabled={!row.available || !download.data}
                           aria-label={`Download ${row.label.toLowerCase()}`}
                           onClick={openDownloadUrl}
                         >
@@ -152,6 +152,28 @@ export function ArtifactsPanel({
                         </Button>
                       ) : (
                         <>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            disabled={!row.available}
+                            aria-label={`Preview ${row.label.toLowerCase()}`}
+                            onClick={() =>
+                              openDrawer({
+                                kind: "artifact",
+                                id: `${audioId}-${row.id}`,
+                                title: row.label,
+                                data:
+                                  row.payload !== undefined &&
+                                  typeof row.payload === "object" &&
+                                  row.payload !== null &&
+                                  !Array.isArray(row.payload)
+                                    ? (row.payload as Record<string, unknown>)
+                                    : { detail: row.detail, value: row.payload },
+                              })
+                            }
+                          >
+                            <Eye />
+                          </Button>
                           <Button
                             size="icon"
                             variant="ghost"

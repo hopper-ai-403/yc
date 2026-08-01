@@ -1,10 +1,15 @@
 "use client";
 
-import { ArrowUpFromLine } from "lucide-react";
+import { ArrowUpFromLine, FolderOpen, RefreshCw } from "lucide-react";
 
-import { ErrorState } from "@/components/common";
+import {
+  ErrorState,
+  QuickActions,
+  ShortcutHint,
+} from "@/components/common";
 import { PageContainer, PageHeader } from "@/components/layout";
 import { Button } from "@/components/ui/button";
+import { ROUTES } from "@/lib/constants";
 import { formatBytes } from "@/lib/format";
 
 import { Dropzone } from "@/features/upload/components/dropzone";
@@ -22,6 +27,33 @@ export function UploadStudio() {
       <PageHeader
         title="Upload Studio"
         description="Create a batch from a ZIP archive or individual call recordings. Processing starts automatically once the upload lands."
+        actions={
+          <div className="flex flex-col items-end gap-1">
+            <QuickActions
+              actions={[
+                {
+                  id: "batches",
+                  label: "Batches",
+                  icon: FolderOpen,
+                  href: ROUTES.batches,
+                  shortcut: "B",
+                },
+                {
+                  id: "reset",
+                  label: "Clear",
+                  icon: RefreshCw,
+                  disabled: busy || upload.queue.length === 0,
+                  onClick: upload.reset,
+                },
+              ]}
+            />
+            <ShortcutHint>
+              Drop files here · press{" "}
+              <kbd className="rounded border border-border px-1 font-mono">U</kbd>{" "}
+              anytime
+            </ShortcutHint>
+          </div>
+        }
       />
 
       {upload.phase === "success" && upload.result ? (

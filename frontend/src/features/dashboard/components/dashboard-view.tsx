@@ -1,12 +1,11 @@
 "use client";
 
-import { RefreshCw, Upload } from "lucide-react";
-import Link from "next/link";
+import { Gauge, RefreshCw, Upload } from "lucide-react";
+import { useEffect } from "react";
 
-import { ErrorState, HealthBadge } from "@/components/common";
+import { ErrorState, HealthBadge, QuickActions } from "@/components/common";
 import { PageContainer, PageHeader } from "@/components/layout";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/lib/constants";
 
 import {
@@ -33,16 +32,23 @@ export function DashboardView() {
   const { byBatchId } = useBatchMetricsForJobs(jobs);
   const exports = useExportActions();
 
-  const metrics = jobsQuery.data
-    ? aggregateJobs(jobs, byBatchId)
-    : null;
+  const metrics = jobsQuery.data ? aggregateJobs(jobs, byBatchId) : null;
 
-  const refreshing =
-    jobsQuery.isRefetching || systemQuery.isRefetching;
+  const refreshing = jobsQuery.isRefetching || systemQuery.isRefetching;
 
   const healthStatus = healthQuery.isError
     ? "unhealthy"
     : (healthQuery.data?.status ?? "unhealthy");
+
+  useEffect(() => {
+    function onRefresh() {
+      void jobsQuery.refetch();
+      void systemQuery.refetch();
+      void healthQuery.refetch();
+    }
+    window.addEventListener("aip:refresh", onRefresh);
+    return () => window.removeEventListener("aip:refresh", onRefresh);
+  }, [jobsQuery, systemQuery, healthQuery]);
 
   return (
     <PageContainer>
@@ -60,26 +66,37 @@ export function DashboardView() {
                 healthQuery.data ? `v${healthQuery.data.version}` : "offline"
               }
             />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                void jobsQuery.refetch();
-                void systemQuery.refetch();
-                void healthQuery.refetch();
-              }}
-              disabled={refreshing}
-              aria-label="Refresh dashboard"
-            >
-              <RefreshCw className={refreshing ? "animate-spin" : undefined} />
-              Refresh
-            </Button>
-            <Link href={ROUTES.upload}>
-              <Button size="sm">
-                <Upload />
-                Quick Upload
-              </Button>
-            </Link>
+            <QuickActions
+              actions={[
+                {
+                  id: "refresh",
+                  label: "Refresh",
+                  icon: RefreshCw,
+                  shortcut: "R",
+                  disabled: refreshing,
+                  onClick: () => {
+                    void jobsQuery.refetch();
+                    void systemQuery.refetch();
+                    void healthQuery.refetch();
+                  },
+                },
+                {
+                  id: "benchmark",
+                  label: "Benchmark",
+                  icon: Gauge,
+                  href: ROUTES.benchmark,
+                  shortcut: "G",
+                },
+                {
+                  id: "upload",
+                  label: "Upload",
+                  icon: Upload,
+                  href: ROUTES.upload,
+                  variant: "default",
+                  shortcut: "U",
+                },
+              ]}
+            />
           </>
         }
       />

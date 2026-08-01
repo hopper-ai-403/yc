@@ -8,6 +8,7 @@ import {
 } from "@/lib/constants";
 import { ApiError } from "@/services/client";
 import { uploadFiles } from "@/services/upload";
+import { notify } from "@/lib/notify";
 import type { UploadResultData } from "@/types/domain";
 
 export const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024;
@@ -135,6 +136,9 @@ export function useUpload() {
       etaSeconds: null,
     });
 
+    const uploadId = `upload-${Date.now()}`;
+    notify.uploadStarted(uploadId, uploadable.length);
+
     const onProgress = (percent: number) => {
       const loaded = (percent / 100) * totalBytes;
       const now = Date.now();
@@ -154,6 +158,7 @@ export function useUpload() {
         }
       }
       setProgress({ loaded, total: totalBytes, percent, bytesPerSecond, etaSeconds });
+      notify.progress(uploadId, "Uploading batch", percent);
     };
 
     try {
@@ -163,18 +168,21 @@ export function useUpload() {
       );
       setResult(response);
       setPhase("success");
+      notify.uploadSuccess(uploadId, response.batch_id, response.files_uploaded);
     } catch (cause) {
       if (controller.signal.aborted) {
         setPhase("idle");
         setProgress(null);
+        notify.dismiss(uploadId);
         return;
       }
-      setError(
+      const apiError =
         cause instanceof ApiError
           ? cause
-          : new ApiError({ message: "Upload failed", code: "UPLOAD_ERROR", status: 0 }),
-      );
+          : new ApiError({ message: "Upload failed", code: "UPLOAD_ERROR", status: 0 });
+      setError(apiError);
       setPhase("error");
+      notify.uploadFailed(uploadId, apiError.message);
     } finally {
       abortRef.current = null;
     }
