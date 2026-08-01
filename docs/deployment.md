@@ -221,52 +221,38 @@ Copy the remaining calibrated blocks from local `.env` (or `.env.example`), incl
 - `PERFORMANCE_*`
 - `AI_*`
 
-**Production overrides recommended (paid plan / ≥8 GB worker):**
+**Production AI overrides (required for assessment / full pipeline):**
+
+Do **not** disable models or force heuristic-only mode to fit a free-tier
+1 GB worker. Prediction quality takes priority; size the worker accordingly.
 
 ```env
 AI_ENABLED=false
 AI_MODEL_CACHE_DIR=/tmp/model_cache
-TECHNICAL_OVERLAP_BACKEND=heuristic
-TECHNICAL_OVERLAP_DEVICE=cpu
-TECHNICAL_OVERLAP_HF_TOKEN=
-ACOUSTIC_CLASSIFIER_BACKEND=audio_event
-ACOUSTIC_EVENT_DEVICE=cpu
-ACOUSTIC_EVENT_LABEL_MAPPING_PATH=config/noise_label_mapping.json
-SPEECH_ENABLED=true
-SPEECH_DEVICE=cpu
-SPEECH_LABEL_MAPPING_PATH=config/speech_label_mapping.json
-PERFORMANCE_WORKER_CONCURRENCY=1
-PERFORMANCE_PREFETCH_MULTIPLIER=1
-PERFORMANCE_MODEL_WARMUP=false
-PERFORMANCE_TASK_TIMEOUT=900
-PERFORMANCE_BATCH_SIZE=10
-```
-
-**Railway free / Hobby (1 GB worker) — required lite profile:**
-
-HuBERT-large alone is ~1.3 GB; AST + pyannote will OOM. Use heuristics +
-neutral speech stub so batches can complete. Emotion tone will be `NEUTRAL`
-until you upgrade RAM.
-
-```env
-PERFORMANCE_MODEL_WARMUP=false
-PERFORMANCE_WORKER_CONCURRENCY=1
-PERFORMANCE_PREFETCH_MULTIPLIER=1
-ANALYSIS_VAD_BACKEND=energy
-TECHNICAL_OVERLAP_BACKEND=heuristic
-ACOUSTIC_CLASSIFIER_BACKEND=heuristic
-SPEECH_ENABLED=false
-```
-
-When pyannote is ready:
-
-```env
+ANALYSIS_VAD_BACKEND=silero
 TECHNICAL_OVERLAP_BACKEND=pyannote
 TECHNICAL_OVERLAP_MODEL_NAME=pyannote/overlapped-speech-detection
 TECHNICAL_OVERLAP_HF_TOKEN=<hf_token_with_model_access>
 TECHNICAL_OVERLAP_DEVICE=cpu
 TECHNICAL_OVERLAP_THRESHOLD=0.62
+ACOUSTIC_CLASSIFIER_BACKEND=audio_event
+ACOUSTIC_EVENT_DEVICE=cpu
+ACOUSTIC_EVENT_LABEL_MAPPING_PATH=config/noise_label_mapping.json
+SPEECH_ENABLED=true
+SPEECH_MODEL_NAME=superb/hubert-large-superb-er
+SPEECH_DEVICE=cpu
+SPEECH_LABEL_MAPPING_PATH=config/speech_label_mapping.json
+PERFORMANCE_WORKER_CONCURRENCY=1
+PERFORMANCE_PREFETCH_MULTIPLIER=1
+PERFORMANCE_MODEL_WARMUP=true
+PERFORMANCE_TASK_TIMEOUT=900
+PERFORMANCE_BATCH_SIZE=10
+HF_TOKEN=<same_or_compatible_hf_token>
 ```
+
+Pyannote falls back to the signal heuristic only if the model cannot load
+(missing token, license, or dependency). Do not set
+`TECHNICAL_OVERLAP_BACKEND=heuristic` unless diagnosing auth failures.
 
 ### 3.3 Verify API
 
@@ -291,44 +277,53 @@ Save the public API base URL (no trailing slash), e.g. `https://aip-api-producti
 | **Builder** | Dockerfile |
 | **Dockerfile path** | `docker/railway.worker.Dockerfile` |
 | Public networking | **Off** (no domain) |
-| **Memory** | **≥ 8 GB** (HuBERT-large ≈ 1.3 GB weights + Torch + AST) |
+| **Memory** | **≥ 8 GB** (required for full AI: HuBERT + AST + pyannote + Torch) |
 
 Worker image installs **ffmpeg** (required for preprocessing).
 
-The Railway worker Dockerfile sets `PERFORMANCE_MODEL_WARMUP=false` so the
-process does **not** download HuBERT at boot. Eager warmup on a small plan
-OOMs the container; Railway restarts it → crash loop every few minutes.
+The Railway worker Dockerfile sets `PERFORMANCE_MODEL_WARMUP=true` so SER
+(and overlap, when configured) load at boot. A free-tier **1 GB** replica
+will OOM under this configuration — use a **paid Railway worker** (or other
+≥8 GB compute). Do **not** disable models, stubs, or heuristic-only mode to
+fit smaller memory.
 
 ### 4.2 Environment variables — `worker`
 
 **Duplicate all variables from `api`** (Railway: “Shared variable” / copy service variables).
 
-**Required / strongly recommended for stability:**
+**Required for full production AI:**
 
 ```env
-PERFORMANCE_MODEL_WARMUP=false
+PERFORMANCE_MODEL_WARMUP=true
 PERFORMANCE_WORKER_CONCURRENCY=1
 CELERY_WORKER_PREFETCH_MULTIPLIER=1
-HF_TOKEN=<optional but recommended — higher HF rate limits>
+ANALYSIS_VAD_BACKEND=silero
+TECHNICAL_OVERLAP_BACKEND=pyannote
+ACOUSTIC_CLASSIFIER_BACKEND=audio_event
+SPEECH_ENABLED=true
+SPEECH_MODEL_NAME=superb/hubert-large-superb-er
+HF_TOKEN=<hf_token_with_model_access>
+TECHNICAL_OVERLAP_HF_TOKEN=<hf_token_with_pyannote_access>
 AI_MODEL_CACHE_DIR=/tmp/model_cache
 ```
 
 Leave `PREPROCESS_FFMPEG_PATH` / `PREPROCESS_FFPROBE_PATH` empty.
 
-If you still OOM on the **first** audio job after warmup is disabled, raise
-Railway memory to 8 GB (or temporarily set
-`SPEECH_MODEL_NAME` to a smaller public SER checkpoint).
+If the worker OOMs, **raise memory to ≥8 GB** (or move the worker to another
+provider). Do not switch to stubs, disable SER, or force heuristic-only
+backends for the assessment deploy.
 
 ### 4.3 Verify worker
 
 In Railway logs you should see:
 
 - `celery@… ready`
-- `model_warmup_skipped` / `warmup_enabled=false` (expected on Railway image)
+- `model_warmup_completed` / SER model loaded (`superb/hubert-large-superb-er`)
+- optional `overlap_model_warmup_completed` when pyannote loads
 - **no** restart loop
 
-Then enqueue one batch and confirm models load during the first task without
-the service crashing.
+Then enqueue one batch and confirm the full pipeline:
+preprocessing → analysis → technical → acoustic → speech → prediction → export.
 ---
 
 ## 5. Vercel — frontend
@@ -402,12 +397,11 @@ Redeploy `api`. Soft refresh the Vercel app.
 | CORS errors in browser | Set `APP_ALLOWED_ORIGINS` to exact Vercel origin; redeploy `api` |
 | API up, jobs never process | Worker not deployed or not sharing Redis URL |
 | `max number of clients reached` | Free Redis quota; one worker only; kill idle clients |
-| Worker crash-loops every few minutes | OOM during HuBERT warmup — set `PERFORMANCE_MODEL_WARMUP=false`, size worker ≥8GB, or use free-tier lite env (`SPEECH_ENABLED=false` + heuristics) |
-| Batch Completed but 0/N files / OOM on 1 GB | Free plan cannot load HuBERT — apply lite profile env vars and redeploy worker |
+| Worker crash-loops / OOM on warmup | Raise worker memory to **≥8 GB**; keep `PERFORMANCE_MODEL_WARMUP=true` and full AI backends |
 | Preprocess fails / ffmpeg missing | Use `docker/railway.worker.Dockerfile` (has ffmpeg) |
 | Noise/SER labels wrong / empty mapping | Ensure image includes repo `config/` (railway Dockerfiles do) |
 | Port bind errors on Railway | API must listen on `$PORT` (railway API Dockerfile does) |
-| HuggingFace / pyannote auth errors | Set HF token or `TECHNICAL_OVERLAP_BACKEND=heuristic` |
+| HuggingFace / pyannote auth errors | Set `HF_TOKEN` / `TECHNICAL_OVERLAP_HF_TOKEN` with model access; heuristic is automatic fallback only |
 | Vercel calls localhost | `NEXT_PUBLIC_API_URL` must be Railway HTTPS URL |
 
 ---
@@ -417,9 +411,10 @@ Redeploy `api`. Soft refresh the Vercel app.
 | Service | RAM | Notes |
 | --- | --- | --- |
 | `api` | 512 MB–1 GB | Light; mostly I/O |
-| `worker` (full AI) | 4–8 GB | Torch + HuBERT + AST; start at 8 GB if OOM |
-| `worker` (free 1 GB) | 1 GB | Lite profile only: heuristic + `SPEECH_ENABLED=false` |
+| `worker` | **≥ 8 GB** | Required for Torch + HuBERT-large + AST + pyannote; concurrency 1 |
 | Vercel | Hobby/Pro | Frontend only |
+
+Free-tier 1 GB workers are **not** supported for the full AI assessment deploy.
 
 ---
 

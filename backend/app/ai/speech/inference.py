@@ -30,33 +30,20 @@ def get_or_load_model(
     *,
     model_factory: type[SpeechEmotionModel] | None = None,
 ) -> SpeechEmotionModel:
-    """Return the process-wide singleton model, loading it once.
-
-    When ``SPEECH_ENABLED=false``, registers the neutral stub (no Torch/HF load)
-    so 1 GB workers can still complete the pipeline.
-    """
-    key = settings.model_name if settings.enabled else "neutral-stub"
+    """Return the process-wide singleton model, loading it once."""
+    key = settings.model_name
     with _lock:
         model = _registry.get(key)
         if model is None:
-            from app.ai.speech.model import (
-                HuggingFaceSpeechEmotionModel,
-                NeutralStubSpeechEmotionModel,
-            )
+            from app.ai.speech.model import HuggingFaceSpeechEmotionModel
 
-            if model_factory is not None:
-                constructor = model_factory
-            elif settings.enabled:
-                constructor = HuggingFaceSpeechEmotionModel
-            else:
-                constructor = NeutralStubSpeechEmotionModel
+            constructor = model_factory or HuggingFaceSpeechEmotionModel
             model = constructor(settings)  # type: ignore[call-arg]
             model.load()
             _registry[key] = model
             logger.info(
                 "speech_model_singleton_registered",
                 model_name=key,
-                enabled=settings.enabled,
                 status="ok",
             )
         return model

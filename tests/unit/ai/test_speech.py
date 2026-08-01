@@ -275,19 +275,6 @@ def test_singleton_loads_once() -> None:
     reset_model_registry()
 
 
-def test_disabled_speech_uses_neutral_stub() -> None:
-    reset_model_registry()
-    settings = _settings(enabled=False, model_name="superb/hubert-large-superb-er")
-    model = get_or_load_model(settings)
-    meta = model.metadata()
-    assert meta.backend == "stub"
-    assert meta.name == "neutral-stub"
-    prediction = model.predict(np.zeros(1600, dtype=np.float32), 16000)
-    assert prediction.top.label == "neu"
-    assert prediction.top.probability == 1.0
-    reset_model_registry()
-
-
 def test_predict_before_load_raises() -> None:
     model = MockSpeechEmotionModel(_settings())
     with pytest.raises(SpeechInferenceException):

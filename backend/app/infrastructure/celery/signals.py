@@ -38,8 +38,9 @@ def on_worker_ready(sender: object = None, **kwargs: object) -> None:
         )
     except Exception as exc:
         # Warmup failure must not prevent worker boot; first task will retry load.
-        # Note: OS OOM killer (SIGKILL) cannot be caught — disable warmup on small
-        # hosts via PERFORMANCE_MODEL_WARMUP=false and size the worker ≥8GB RAM.
+        # Note: OS OOM killer (SIGKILL) cannot be caught — size the worker ≥8GB
+        # RAM for full AI warmup (HuBERT / overlap). Do not disable models to fit
+        # free-tier memory limits.
         logger.error(
             "worker_warmup_failed",
             error=str(exc),

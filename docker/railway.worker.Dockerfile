@@ -5,12 +5,14 @@
 
 FROM python:3.12-slim
 
+# Full AI pipeline (HuBERT + AST + pyannote). Requires ≥8 GB worker RAM.
+# Do not disable models to fit a free-tier 1 GB instance.
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PYTHONPATH=/app \
-    PERFORMANCE_MODEL_WARMUP=false \
+    PERFORMANCE_MODEL_WARMUP=true \
     AI_MODEL_CACHE_DIR=/tmp/model_cache \
     HF_HOME=/tmp/model_cache \
     TRANSFORMERS_CACHE=/tmp/model_cache \

@@ -66,39 +66,6 @@ class SpeechEmotionModel(Protocol):
         ...
 
 
-class NeutralStubSpeechEmotionModel:
-    """Zero-weight SER stub for memory-constrained workers (e.g. 1 GB free tier).
-
-    Emits a deterministic NEUTRAL / neu prediction without loading Torch or
-    Hugging Face weights. Use when ``SPEECH_ENABLED=false``.
-    """
-
-    def __init__(self, settings: SpeechSettings) -> None:
-        self._settings = settings
-
-    def load(self) -> None:
-        logger.info(
-            "speech_model_loaded",
-            model_name="neutral-stub",
-            backend="stub",
-            status="ok",
-        )
-
-    def predict(self, waveform: np.ndarray, sample_rate: int) -> ModelPrediction:
-        _ = waveform, sample_rate
-        return ModelPrediction(
-            scores=[LabelScore(label="neu", probability=1.0)],
-        )
-
-    def metadata(self) -> ModelMetadata:
-        return ModelMetadata(
-            name="neutral-stub",
-            backend="stub",
-            labels=["neu"],
-            expected_sample_rate=self._settings.expected_sample_rate,
-        )
-
-
 class HuggingFaceSpeechEmotionModel:
     """Default SER implementation backed by a Hugging Face audio classifier.
 
