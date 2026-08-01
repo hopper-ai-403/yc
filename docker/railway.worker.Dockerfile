@@ -32,6 +32,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ .
 COPY config/ ./config/
 
-# concurrency=1 keeps Redis Cloud client usage low.
-# max-tasks-per-child recycles the process to limit long-run RSS growth.
-CMD ["celery", "-A", "app.infrastructure.celery.app.celery_app", "worker", "--loglevel=INFO", "--concurrency=1", "-Q", "default", "--max-tasks-per-child=20"]
+CMD ["celery", "-A", "app.infrastructure.celery.app.celery_app", "worker", "--loglevel=INFO", "--pool=solo", "--concurrency=1", "-Q", "default"]

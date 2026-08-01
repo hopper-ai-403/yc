@@ -7,18 +7,31 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audio.analysis.features import FeatureExtractor
 from app.audio.analysis.pipeline import AnalysisPipeline
 from app.audio.analysis.service import AnalysisService
-from app.audio.analysis.vad import EnergyVAD, SileroVAD, VoiceActivityDetector
+from app.audio.analysis.vad import (
+    EnergyVAD,
+    ResilientVAD,
+    SileroVAD,
+    VoiceActivityDetector,
+)
 from app.audio.repository import SqlAlchemyAudioRepository
 from app.config.settings import AnalysisSettings, get_settings
 from app.infrastructure.r2.client import CloudflareR2Storage
+from app.shared.logging.setup import get_logger
 from app.shared.storage.provider import StorageProvider
+
+logger = get_logger(__name__)
 
 
 def build_vad(settings: AnalysisSettings) -> VoiceActivityDetector:
-    """Construct the configured VAD backend."""
+    """Construct the configured VAD backend.
+
+    Silero is preferred; on load/inference failure the resilient wrapper falls
+    back to energy VAD so a single torch.hub outage cannot fail every audio.
+    """
     if settings.vad_backend == "energy":
         return EnergyVAD()
-    return SileroVAD(settings)
+    logger.info("vad_backend_selected", backend="silero", status="ok")
+    return ResilientVAD(SileroVAD(settings), EnergyVAD())
 
 
 def build_analysis_service(

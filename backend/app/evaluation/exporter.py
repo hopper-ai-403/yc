@@ -116,7 +116,6 @@ class BatchExporter:
 
     async def _exists(self, key: str) -> bool:
         try:
-            await self._storage.download(key)
+            return await self._storage.exists(key)
         except Exception:
             return False
-        return True

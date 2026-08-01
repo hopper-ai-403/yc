@@ -163,3 +163,31 @@ class EnergyVAD:
             speech,
             total_duration=float(len(waveform) / sample_rate),
         )
+
+
+class ResilientVAD:
+    """Prefer Silero; permanently fall back to energy VAD after first failure."""
+
+    def __init__(
+        self,
+        primary: VoiceActivityDetector,
+        fallback: VoiceActivityDetector,
+    ) -> None:
+        self._primary = primary
+        self._fallback = fallback
+        self._use_fallback = False
+
+    def detect(self, waveform: np.ndarray, sample_rate: int) -> VADResult:
+        if self._use_fallback:
+            return self._fallback.detect(waveform, sample_rate)
+        try:
+            return self._primary.detect(waveform, sample_rate)
+        except Exception as exc:
+            self._use_fallback = True
+            logger.warning(
+                "vad_primary_failed_falling_back",
+                error=str(exc),
+                fallback="energy",
+                status="fallback",
+            )
+            return self._fallback.detect(waveform, sample_rate)
