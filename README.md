@@ -89,6 +89,7 @@ pytest ../tests -q
 ## Documentation
 
 - [Architecture Overview](docs/architecture.md)
+- [Deployment (Railway + Vercel)](docs/deployment.md)
 - [Setup Guide](docs/setup.md)
 - [Development Guide](docs/development.md)
 - [Folder Structure](docs/folder-structure.md)
