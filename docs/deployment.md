@@ -221,7 +221,7 @@ Copy the remaining calibrated blocks from local `.env` (or `.env.example`), incl
 - `PERFORMANCE_*`
 - `AI_*`
 
-**Production overrides recommended:**
+**Production overrides recommended (paid plan / ≥8 GB worker):**
 
 ```env
 AI_ENABLED=false
@@ -240,6 +240,22 @@ PERFORMANCE_PREFETCH_MULTIPLIER=1
 PERFORMANCE_MODEL_WARMUP=false
 PERFORMANCE_TASK_TIMEOUT=900
 PERFORMANCE_BATCH_SIZE=10
+```
+
+**Railway free / Hobby (1 GB worker) — required lite profile:**
+
+HuBERT-large alone is ~1.3 GB; AST + pyannote will OOM. Use heuristics +
+neutral speech stub so batches can complete. Emotion tone will be `NEUTRAL`
+until you upgrade RAM.
+
+```env
+PERFORMANCE_MODEL_WARMUP=false
+PERFORMANCE_WORKER_CONCURRENCY=1
+PERFORMANCE_PREFETCH_MULTIPLIER=1
+ANALYSIS_VAD_BACKEND=energy
+TECHNICAL_OVERLAP_BACKEND=heuristic
+ACOUSTIC_CLASSIFIER_BACKEND=heuristic
+SPEECH_ENABLED=false
 ```
 
 When pyannote is ready:
@@ -386,7 +402,8 @@ Redeploy `api`. Soft refresh the Vercel app.
 | CORS errors in browser | Set `APP_ALLOWED_ORIGINS` to exact Vercel origin; redeploy `api` |
 | API up, jobs never process | Worker not deployed or not sharing Redis URL |
 | `max number of clients reached` | Free Redis quota; one worker only; kill idle clients |
-| Worker crash-loops every few minutes | OOM during HuBERT warmup — set `PERFORMANCE_MODEL_WARMUP=false`, size worker ≥8GB, redeploy `docker/railway.worker.Dockerfile` |
+| Worker crash-loops every few minutes | OOM during HuBERT warmup — set `PERFORMANCE_MODEL_WARMUP=false`, size worker ≥8GB, or use free-tier lite env (`SPEECH_ENABLED=false` + heuristics) |
+| Batch Completed but 0/N files / OOM on 1 GB | Free plan cannot load HuBERT — apply lite profile env vars and redeploy worker |
 | Preprocess fails / ffmpeg missing | Use `docker/railway.worker.Dockerfile` (has ffmpeg) |
 | Noise/SER labels wrong / empty mapping | Ensure image includes repo `config/` (railway Dockerfiles do) |
 | Port bind errors on Railway | API must listen on `$PORT` (railway API Dockerfile does) |
@@ -400,7 +417,8 @@ Redeploy `api`. Soft refresh the Vercel app.
 | Service | RAM | Notes |
 | --- | --- | --- |
 | `api` | 512 MB–1 GB | Light; mostly I/O |
-| `worker` | 4–8 GB | Torch + HuBERT + AST; start at 8 GB if OOM |
+| `worker` (full AI) | 4–8 GB | Torch + HuBERT + AST; start at 8 GB if OOM |
+| `worker` (free 1 GB) | 1 GB | Lite profile only: heuristic + `SPEECH_ENABLED=false` |
 | Vercel | Hobby/Pro | Frontend only |
 
 ---
