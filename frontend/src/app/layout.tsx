@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import type { ReactNode } from "react";
 
@@ -21,6 +21,16 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+function resolveMetadataBase(): URL {
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return new URL(process.env.NEXT_PUBLIC_APP_URL);
+  }
+  if (process.env.VERCEL_URL) {
+    return new URL(`https://${process.env.VERCEL_URL}`);
+  }
+  return new URL("http://localhost:3100");
+}
+
 export const metadata: Metadata = {
   title: {
     default: APP_NAME,
@@ -28,6 +38,24 @@ export const metadata: Metadata = {
   },
   description:
     "Batch audio intelligence: emotion, acoustic, and technical analysis of customer call recordings.",
+  applicationName: APP_NAME,
+  keywords: [
+    "audio intelligence",
+    "call analytics",
+    "speech emotion",
+    "noise detection",
+    "SaaS",
+  ],
+  authors: [{ name: "Audio Intelligence Studio" }],
+  creator: "Audio Intelligence Studio",
+  metadataBase: resolveMetadataBase(),
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#0B0B12" },
+    { media: "(prefers-color-scheme: light)", color: "#0B0B12" },
+  ],
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
