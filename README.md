@@ -1,5 +1,12 @@
 # Audio Intelligence Platform
 
+cd \backend"
+.\.venv\Scripts\activate
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+cd \frontend"
+npm run dev -- --port 3100
+
 Production-grade SaaS platform for batch analysis of customer call recordings with structured AI predictions.
 
 ## Sprint 0 Status

@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Any
+
+import numpy as np
+
 from app.ai.acoustic.classifier import NoiseClassifier
 from app.ai.acoustic.detector import NoiseDetector
 from app.ai.acoustic.schemas import ACOUSTIC_VERSION, AcousticResult
@@ -27,13 +31,22 @@ class AcousticAnalyzer:
         self._classifier = classifier
         self._severity = severity
 
-    def analyze(self, artifact: AnalysisArtifact) -> AcousticResult:
+    def analyze(
+        self,
+        artifact: AnalysisArtifact,
+        *,
+        waveform: np.ndarray | None = None,
+        sample_rate: int | None = None,
+    ) -> AcousticResult:
         present, noise_score, noise_details = self._detector.detect(
             artifact.features,
             artifact.vad,
         )
 
         if present:
+            bind = getattr(self._classifier, "bind_waveform", None)
+            if bind is not None and waveform is not None:
+                bind(waveform, sample_rate or artifact.sample_rate)
             noise_type, classification_details = self._classifier.classify(
                 artifact.features,
                 artifact.vad,
@@ -47,7 +60,7 @@ class AcousticAnalyzer:
             # Business rule: no noise => NONE type and NONE severity.
             noise_type = NoiseType.NONE
             severity = NoiseSeverity.NONE
-            classification_details = {}
+            classification_details: dict[str, Any] = {}
             severity_details = {}
 
         result = AcousticResult(

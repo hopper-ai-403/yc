@@ -9,6 +9,7 @@ from uuid import UUID
 from app.ai.acoustic.analyzer import AcousticAnalyzer
 from app.ai.acoustic.exceptions import AcousticArtifactMissingException
 from app.ai.acoustic.schemas import ACOUSTIC_VERSION, AcousticResult
+from app.audio.analysis.signal import load_waveform
 from app.audio.models import AudioAsset
 from app.shared.logging.setup import get_logger
 from app.shared.storage.provider import StorageProvider
@@ -31,6 +32,27 @@ class AcousticPipeline:
     ) -> None:
         self._storage = storage
         self._analyzer = analyzer
+
+    async def _load_optional_waveform(
+        self, asset: AudioAsset
+    ) -> tuple[Any, int | None]:
+        """Best-effort load of normalized audio for neural noise classification."""
+        import numpy as np
+
+        if not asset.normalized_storage_key:
+            return None, None
+        try:
+            raw = await self._storage.download(asset.normalized_storage_key)
+            waveform, sample_rate = load_waveform(raw, expected_sample_rate=16_000)
+            return waveform, sample_rate
+        except Exception as exc:
+            logger.warning(
+                "acoustic_waveform_unavailable",
+                audio_id=str(asset.id),
+                error=str(exc),
+                status="fallback",
+            )
+            return None, None
 
     async def run(
         self,
@@ -58,7 +80,12 @@ class AcousticPipeline:
             payload = json.loads(raw.decode("utf-8"))
 
         artifact = AnalysisArtifact.model_validate(payload)
-        result = self._analyzer.analyze(artifact)
+        waveform, sample_rate = await self._load_optional_waveform(asset)
+        result = self._analyzer.analyze(
+            artifact,
+            waveform=waveform,
+            sample_rate=sample_rate,
+        )
 
         key = acoustic_storage_key(asset.batch_id, asset.id)
         await self._storage.upload(

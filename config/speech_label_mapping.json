@@ -1,0 +1,86 @@
+{
+  "neu": {
+    "emotion": "NEUTRAL",
+    "weight": 1.0
+  },
+  "neutral": {
+    "emotion": "NEUTRAL",
+    "weight": 1.0
+  },
+  "calm": {
+    "emotion": "NEUTRAL",
+    "weight": 0.9
+  },
+  "hap": {
+    "emotion": "SATISFIED",
+    "weight": 1.0
+  },
+  "happy": {
+    "emotion": "SATISFIED",
+    "weight": 1.0
+  },
+  "happiness": {
+    "emotion": "SATISFIED",
+    "weight": 1.0
+  },
+  "excited": {
+    "emotion": "SATISFIED",
+    "weight": 0.85
+  },
+  "surprised": {
+    "emotion": "SATISFIED",
+    "weight": 0.7
+  },
+  "surprise": {
+    "emotion": "SATISFIED",
+    "weight": 0.7
+  },
+  "ang": {
+    "emotion": "FRUSTRATED",
+    "weight": 1.0
+  },
+  "angry": {
+    "emotion": "FRUSTRATED",
+    "weight": 1.0
+  },
+  "anger": {
+    "emotion": "FRUSTRATED",
+    "weight": 1.0
+  },
+  "frustrated": {
+    "emotion": "FRUSTRATED",
+    "weight": 1.0
+  },
+  "sad": {
+    "emotion": "UPSET",
+    "weight": 1.0
+  },
+  "sadness": {
+    "emotion": "UPSET",
+    "weight": 1.0
+  },
+  "disgust": {
+    "emotion": "UPSET",
+    "weight": 0.9
+  },
+  "dis": {
+    "emotion": "UPSET",
+    "weight": 0.9
+  },
+  "fea": {
+    "emotion": "DISTRESSED",
+    "weight": 1.0
+  },
+  "fear": {
+    "emotion": "DISTRESSED",
+    "weight": 1.0
+  },
+  "fearful": {
+    "emotion": "DISTRESSED",
+    "weight": 1.0
+  },
+  "afraid": {
+    "emotion": "DISTRESSED",
+    "weight": 1.0
+  }
+}

@@ -17,9 +17,8 @@ from app.audio.repository import AudioBatchRepository, AudioRepository
 from app.auth.models import User
 from app.auth.repository import UserRepository
 from app.config.settings import UploadSettings
-from app.jobs.models import Job
-from app.jobs.repository import JobRepository
-from app.shared.domain.enums import AudioStatus, BatchStatus, JobStatus, UserRole
+from app.jobs.service import JobService
+from app.shared.domain.enums import AudioStatus, BatchStatus, UserRole
 from app.shared.logging.setup import get_logger
 from app.shared.storage.provider import StorageProvider
 from app.upload.exceptions import (
@@ -60,14 +59,14 @@ class UploadService:
         users: UserRepository,
         batches: AudioBatchRepository,
         assets: AudioRepository,
-        jobs: JobRepository,
+        job_service: JobService,
     ) -> None:
         self._settings = settings
         self._storage = storage
         self._users = users
         self._batches = batches
         self._assets = assets
-        self._jobs = jobs
+        self._job_service = job_service
 
     async def upload(self, uploads: list[IncomingUpload]) -> UploadResultData:
         """Validate, store, and persist an upload batch."""
@@ -174,16 +173,8 @@ class UploadService:
                     )
                 )
 
-            job = await self._jobs.create(
-                Job(
-                    batch_id=batch.id,
-                    status=JobStatus.PENDING,
-                    progress=0,
-                    total_files=len(accepted),
-                    processed_files=0,
-                    failed_files=0,
-                )
-            )
+            job = await self._job_service.create_job(batch.id)
+            job = await self._job_service.queue_job(job.id)
         except Exception as exc:
             await self._cleanup_keys(uploaded_keys)
             if isinstance(exc, UploadValidationException):

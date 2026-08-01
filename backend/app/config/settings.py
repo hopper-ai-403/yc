@@ -274,9 +274,9 @@ class TechnicalSettings(BaseSettings):
     total_silence_ratio: float = 0.55
     min_speech_ratio: float = 0.35
 
-    # Quality scoring thresholds.
-    clear_threshold: float = 85.0
-    slightly_impaired_threshold: float = 65.0
+    # Quality scoring thresholds (calibrated).
+    clear_threshold: float = 75.0
+    slightly_impaired_threshold: float = 58.3
 
     # Quality penalties (weights sum to 100 max).
     snr_penalty_weight: float = 30.0
@@ -286,9 +286,9 @@ class TechnicalSettings(BaseSettings):
     silence_penalty_weight: float = 15.0
     speech_presence_penalty_weight: float = 10.0
 
-    # Quality input thresholds.
-    snr_good_db: float = 25.0
-    snr_ok_db: float = 12.0
+    # Quality input thresholds (calibrated against observed SNR bands).
+    snr_good_db: float = 18.0
+    snr_ok_db: float = 14.8
     dynamic_range_good_db: float = 18.0
     dynamic_range_bad_db: float = 6.0
     silence_ratio_warn: float = 0.35
@@ -296,8 +296,8 @@ class TechnicalSettings(BaseSettings):
     speech_ratio_good: float = 0.6
     speech_ratio_bad: float = 0.15
 
-    # Overlap heuristics (signal-based detector).
-    overlap_threshold: float = 0.6
+    # Overlap heuristics (signal-based detector; threshold calibrated).
+    overlap_threshold: float = 0.62
     overlap_density_weight: float = 0.35
     overlap_zcr_weight: float = 0.2
     overlap_bandwidth_weight: float = 0.25
@@ -316,9 +316,9 @@ class AcousticSettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="ACOUSTIC_", extra="ignore")
 
-    # Noise detection thresholds.
+    # Noise detection thresholds (calibrated on call-recording distributions).
     noise_snr_threshold_db: float = 18.0
-    noise_presence_score_threshold: float = 0.5
+    noise_presence_score_threshold: float = 0.55
     noise_silence_zcr_min: float = 0.04
     noise_silence_zcr_max: float = 0.25
     noise_bandwidth_min_hz: float = 2500.0
@@ -333,7 +333,7 @@ class AcousticSettings(BaseSettings):
     severity_snr_weight: float = 0.35
     severity_noise_duration_weight: float = 0.3
 
-    # Classification heuristics anchors.
+    # Classification heuristics anchors (fallback classifier).
     classify_music_centroid_hz: float = 2500.0
     classify_music_rolloff_hz: float = 5500.0
     classify_traffic_centroid_hz: float = 900.0
@@ -343,6 +343,24 @@ class AcousticSettings(BaseSettings):
     classify_keyboard_zcr: float = 0.10
     classify_chatter_min_segments: int = 8
 
+    # Audio-event classifier (Hugging Face).
+    classifier_backend: str = "audio_event"
+    event_model_name: str = "MIT/ast-finetuned-audioset-10-10-0.4593"
+    event_device: str = "cpu"
+    event_top_k: int = 10
+    event_min_score: float = 0.02
+    event_label_mapping_path: str = "config/noise_label_mapping.json"
+    event_label_mapping: dict[str, object] = Field(default_factory=dict)
+
+    @field_validator("event_label_mapping", mode="before")
+    @classmethod
+    def parse_event_label_mapping(cls, value: object) -> object:
+        if isinstance(value, str):
+            import json
+
+            return json.loads(value)
+        return value
+
 
 class SpeechSettings(BaseSettings):
     """Speech intelligence (SER) settings."""
@@ -350,38 +368,23 @@ class SpeechSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="SPEECH_", extra="ignore")
 
     enabled: bool = True
-    model_name: str = "superb/wav2vec2-base-superb-er"
+    # Stronger SUPERB ER model (HuBERT-large) for conversational English; override via SPEECH_MODEL_NAME.
+    model_name: str = "superb/hubert-large-superb-er"
     expected_sample_rate: int = 16_000
     device: str = "cpu"
     top_k: int | None = None
 
-    # Intensity calibration from top-1 probability.
-    intensity_medium_probability: float = 0.45
-    intensity_high_probability: float = 0.7
+    # Intensity calibration from combined certainty score (calibrated).
+    intensity_medium_probability: float = 0.52
+    intensity_high_probability: float = 0.62
+    intensity_top_weight: float = 0.5
+    intensity_margin_weight: float = 0.3
+    intensity_entropy_weight: float = 0.2
 
-    # Label mapping: raw model label -> platform tone (JSON override via env).
-    label_mapping: dict[str, str] = Field(
-        default_factory=lambda: {
-            "neu": "NEUTRAL",
-            "neutral": "NEUTRAL",
-            "calm": "NEUTRAL",
-            "hap": "SATISFIED",
-            "happy": "SATISFIED",
-            "happiness": "SATISFIED",
-            "excited": "SATISFIED",
-            "surprised": "SATISFIED",
-            "ang": "FRUSTRATED",
-            "angry": "FRUSTRATED",
-            "frustrated": "FRUSTRATED",
-            "sad": "UPSET",
-            "sadness": "UPSET",
-            "disgust": "UPSET",
-            "dis": "UPSET",
-            "fea": "DISTRESSED",
-            "fear": "DISTRESSED",
-            "fearful": "DISTRESSED",
-        }
-    )
+    # Label mapping: file path (preferred) or JSON override via SPEECH_LABEL_MAPPING.
+    # No hardcoded production mappings — configure via speech_label_mapping.json.
+    label_mapping_path: str = "config/speech_label_mapping.json"
+    label_mapping: dict[str, object] = Field(default_factory=dict)
     unmapped_label_tone: str = "NEUTRAL"
 
     @field_validator("label_mapping", mode="before")
@@ -403,12 +406,12 @@ class PredictionSettings(BaseSettings):
     confidence_rounding: int = 2
     internal_prediction_enabled: bool = True
 
-    # Overall confidence weights (JSON override via env).
+    # Overall confidence weights (JSON override via env). Normalized at estimate-time.
     confidence_weights: dict[str, float] = Field(
         default_factory=lambda: {
-            "speech": 0.4,
-            "technical": 0.3,
-            "acoustic": 0.3,
+            "speech": 0.675,
+            "technical": 0.173,
+            "acoustic": 0.152,
         }
     )
     # Technical sub-weights: quality / overlap / silence components.
@@ -419,6 +422,10 @@ class PredictionSettings(BaseSettings):
             "silence": 0.25,
         }
     )
+    # Speech certainty mix when tone_probabilities are available.
+    confidence_speech_top_weight: float = 0.5
+    confidence_speech_margin_weight: float = 0.3
+    confidence_speech_entropy_weight: float = 0.2
 
     @field_validator(
         "confidence_weights", "confidence_technical_weights", mode="before"

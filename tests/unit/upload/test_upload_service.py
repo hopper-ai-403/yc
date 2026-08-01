@@ -3,7 +3,7 @@
 from collections.abc import AsyncGenerator
 from io import BytesIO
 from unittest.mock import AsyncMock
-from uuid import uuid4
+from uuid import UUID, uuid4
 from zipfile import ZipFile
 
 import pytest
@@ -18,10 +18,46 @@ from app.audio.repository import (
 )
 from app.auth.repository import SqlAlchemyUserRepository
 from app.config.settings import UploadSettings, get_settings
+from app.jobs.models import Job
 from app.jobs.repository import SqlAlchemyJobRepository
 from app.main import create_application
+from app.shared.domain.enums import JobStatus
 from app.upload.exceptions import EmptyUploadException
 from app.upload.service import IncomingUpload, UploadService
+
+
+class FakeJobService:
+    """Persists PENDING jobs then marks them QUEUED without Celery."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._jobs = SqlAlchemyJobRepository(session)
+        self._batches = SqlAlchemyAudioBatchRepository(session)
+        self.queue_calls = 0
+
+    async def create_job(self, batch_id: UUID) -> Job:
+        existing = await self._jobs.find_by_batch(batch_id)
+        if existing is not None:
+            return existing
+        batch = await self._batches.find_by_id(batch_id)
+        assert batch is not None
+        return await self._jobs.create(
+            Job(
+                batch_id=batch_id,
+                status=JobStatus.PENDING,
+                progress=0,
+                total_files=batch.total_files,
+                processed_files=0,
+                failed_files=0,
+            )
+        )
+
+    async def queue_job(self, job_id: UUID, *, countdown: int = 0) -> Job:
+        del countdown
+        self.queue_calls += 1
+        job = await self._jobs.find_by_id(job_id)
+        assert job is not None
+        job.status = JobStatus.QUEUED
+        return await self._jobs.save(job)
 
 
 class FakeStorage:
@@ -105,7 +141,7 @@ async def upload_service(session: AsyncSession) -> UploadService:
         users=SqlAlchemyUserRepository(session),
         batches=SqlAlchemyAudioBatchRepository(session),
         assets=SqlAlchemyAudioRepository(session),
-        jobs=SqlAlchemyJobRepository(session),
+        job_service=FakeJobService(session),  # type: ignore[arg-type]
     )
 
 
@@ -205,7 +241,7 @@ async def test_r2_upload_keys(upload_service: UploadService) -> None:
         users=upload_service._users,
         batches=upload_service._batches,
         assets=upload_service._assets,
-        jobs=upload_service._jobs,
+        job_service=upload_service._job_service,
     )
     result = await service.upload(
         [

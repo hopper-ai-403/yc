@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from app.ai.speech.inference import map_intensity, map_label
+from app.ai.speech.inference import map_intensity, select_tone
 from app.ai.speech.model import SpeechEmotionModel
 from app.ai.speech.schemas import SPEECH_VERSION, SpeechResult
 from app.config.settings import SpeechSettings
@@ -36,16 +36,8 @@ class SpeechAnalyzer:
         prediction = self._model.predict(waveform, sample_rate)
         top = prediction.top
 
-        emotional_tone = map_label(top.label, self._settings)
-        emotional_intensity = map_intensity(top.probability, self._settings)
-
-        tone_probabilities: dict[str, float] = {}
-        for score in prediction.scores:
-            tone = map_label(score.label, self._settings)
-            tone_probabilities[tone.value] = round(
-                max(tone_probabilities.get(tone.value, 0.0), score.probability),
-                6,
-            )
+        emotional_tone, tone_probabilities = select_tone(prediction, self._settings)
+        emotional_intensity = map_intensity(prediction, self._settings)
 
         result = SpeechResult(
             audio_id=audio_id,

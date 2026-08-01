@@ -311,7 +311,7 @@ def test_confidence_breakdown_components() -> None:
     assert 0.0 <= breakdown.technical <= 1.0
     assert breakdown.acoustic == 0.8  # 1 - noise_score when noise absent
     assert breakdown.overall == round(
-        0.4 * 0.8 + 0.3 * breakdown.technical + 0.3 * 0.8,
+        0.675 * 0.8 + 0.173 * breakdown.technical + 0.152 * 0.8,
         2,
     )
 

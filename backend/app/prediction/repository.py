@@ -12,13 +12,30 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from enum import Enum
+from typing import TypeVar
+
 from app.prediction.models import Prediction
-from app.shared.domain.enums import NoiseSeverity
+from app.shared.domain.enums import (
+    AudioQuality,
+    EmotionIntensity,
+    EmotionTone,
+    NoiseSeverity,
+)
 from app.shared.domain.exceptions import (
     ImmutableEntityException,
     InvariantViolationException,
 )
 from app.shared.domain.value_objects import PredictionResult
+
+EnumT = TypeVar("EnumT", bound=Enum)
+
+
+def _coerce_enum(enum_cls: type[EnumT], value: EnumT | str) -> EnumT:
+    """Accept enum members or their string values from public prediction JSON."""
+    if isinstance(value, enum_cls):
+        return value
+    return enum_cls(value)
 
 
 class PredictionRepository(ABC):
@@ -156,12 +173,16 @@ class SqlAlchemyPredictionRepository(PredictionRepository):
         payload = dict(prediction_json)
         prediction = Prediction(
             audio_asset_id=audio_asset_id,
-            emotional_tone=payload["emotional_tone"],
-            emotional_intensity=payload["emotional_intensity"],
+            emotional_tone=_coerce_enum(EmotionTone, payload["emotional_tone"]),
+            emotional_intensity=_coerce_enum(
+                EmotionIntensity, payload["emotional_intensity"]
+            ),
             background_noise_present=payload["background_noise_present"],
             background_noise_type=payload["background_noise_type"],
-            background_noise_severity=payload["background_noise_severity"],
-            audio_quality=payload["audio_quality"],
+            background_noise_severity=_coerce_enum(
+                NoiseSeverity, payload["background_noise_severity"]
+            ),
+            audio_quality=_coerce_enum(AudioQuality, payload["audio_quality"]),
             speaker_overlap=payload["speaker_overlap_present"],
             long_silence=payload["long_silence_present"],
             confidence=payload["confidence"],
@@ -205,10 +226,11 @@ class SqlAlchemyPredictionRepository(PredictionRepository):
                     "Noise type must be empty or NONE when no noise exists",
                     details={"type": prediction.background_noise_type},
                 )
-            if prediction.background_noise_severity is not NoiseSeverity.NONE:
+            severity = _coerce_enum(
+                NoiseSeverity, prediction.background_noise_severity
+            )
+            if severity is not NoiseSeverity.NONE:
                 raise InvariantViolationException(
                     "Noise severity must be NONE when no noise exists",
-                    details={
-                        "severity": prediction.background_noise_severity.value,
-                    },
+                    details={"severity": severity.value},
                 )

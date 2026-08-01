@@ -104,7 +104,11 @@ export function BatchExplorer() {
   const total = jobsQuery.data?.count ?? 0;
 
   const filtered = useMemo(() => {
-    let rows = items;
+    // Hide cancelled/empty seed jobs from the default view; they are not active work.
+    let rows =
+      status == null
+        ? items.filter((job) => job.status !== "CANCELLED")
+        : items;
     const needle = debouncedSearch.trim().toLowerCase();
     if (needle) {
       rows = rows.filter(
@@ -119,7 +123,7 @@ export function BatchExplorer() {
       rows = rows.filter((job) => new Date(job.created_at).getTime() >= cutoff);
     }
     return rows;
-  }, [items, debouncedSearch, dateFilter]);
+  }, [items, debouncedSearch, dateFilter, status]);
 
   const sorted = useMemo(() => {
     const direction = sortDirection === "asc" ? 1 : -1;

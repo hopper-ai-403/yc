@@ -13,12 +13,28 @@ from app.shared.database.session import async_session_factory
 
 T = TypeVar("T")
 
+_worker_loop: asyncio.AbstractEventLoop | None = None
+
+
+def _get_worker_loop() -> asyncio.AbstractEventLoop:
+    """Reuse one event loop for the worker process.
+
+    Celery solo/prefork tasks must not call ``asyncio.run()`` per task on
+    Windows — that closes the loop and breaks cached Redis/SQLAlchemy clients.
+    """
+    global _worker_loop
+    if sys.platform.startswith("win"):
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    if _worker_loop is None or _worker_loop.is_closed():
+        _worker_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(_worker_loop)
+    return _worker_loop
+
 
 def run_async(coro: Coroutine[object, object, T]) -> T:
     """Run an async coroutine from a sync Celery task."""
-    if sys.platform.startswith("win"):
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    return asyncio.run(coro)
+    loop = _get_worker_loop()
+    return loop.run_until_complete(coro)
 
 
 async def with_session(handler: Callable[[AsyncSession], Awaitable[T]]) -> T:

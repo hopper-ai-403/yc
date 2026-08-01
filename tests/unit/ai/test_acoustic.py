@@ -160,20 +160,22 @@ def _asset(analysis_json: dict[str, Any] | None = None) -> AudioAsset:
 
 
 def test_noise_absent_clean_signal() -> None:
-    detector = SignalBasedNoiseDetector(_settings())
+    settings = _settings()
+    detector = SignalBasedNoiseDetector(settings)
     present, score, _ = detector.detect(_features(), _vad())
     assert present is False
-    assert score < 0.5
+    assert score < settings.noise_presence_score_threshold
 
 
 def test_noise_present_low_snr() -> None:
-    detector = SignalBasedNoiseDetector(_settings())
+    settings = _settings()
+    detector = SignalBasedNoiseDetector(settings)
     features = _features(
         snr_estimate=8.0, zero_crossing_rate=0.15, spectral_bandwidth=4500.0
     )
     present, score, _ = detector.detect(features, _vad())
     assert present is True
-    assert score >= 0.5
+    assert score >= settings.noise_presence_score_threshold
 
 
 # --- Classification ----------------------------------------------------

@@ -44,6 +44,9 @@ def create_application() -> FastAPI:
     """Build and configure the FastAPI application."""
     settings = get_settings()
 
+    # Ensure all ORM mappers are registered before the first query.
+    import app.shared.database.models_registry  # noqa: F401
+
     application = FastAPI(
         title=settings.app.name,
         version=settings.app.version,

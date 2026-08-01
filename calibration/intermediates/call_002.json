@@ -1,0 +1,198 @@
+{
+  "audio_id": "call_002",
+  "path": "C:\\Users\\hp\\Downloads\\test\\call_002.ogg",
+  "analysis": {
+    "sample_rate": 16000,
+    "duration": 34.960625,
+    "snr_estimate": 15.91192268450067,
+    "dynamic_range": 22.802036109446224,
+    "peak_amplitude": 0.6097087860107422,
+    "zero_crossing_rate": 0.13491930180695333,
+    "spectral_centroid": 1526.5556599694921,
+    "spectral_bandwidth": 1338.5666475186056,
+    "speech_ratio": 0.175912,
+    "largest_silence": 8.280625,
+    "speech_segments": 30
+  },
+  "speech": {
+    "model": "superb/hubert-large-superb-er",
+    "top5": [
+      {
+        "label": "hap",
+        "probability": 0.675626
+      },
+      {
+        "label": "sad",
+        "probability": 0.164377
+      },
+      {
+        "label": "neu",
+        "probability": 0.124065
+      },
+      {
+        "label": "ang",
+        "probability": 0.035932
+      }
+    ],
+    "entropy": 0.678178,
+    "margin": 0.511249,
+    "certainty": 0.555552,
+    "mapped_tone": "SATISFIED",
+    "mapped_intensity": "MEDIUM",
+    "tone_probabilities": {
+      "SATISFIED": 0.675626,
+      "UPSET": 0.164377,
+      "NEUTRAL": 0.124065,
+      "FRUSTRATED": 0.035932
+    },
+    "raw_top_label": "hap",
+    "raw_top_probability": 0.675626,
+    "unmapped_labels": []
+  },
+  "noise_detection": {
+    "present": true,
+    "score": 0.705217,
+    "threshold": 0.55,
+    "details": {
+      "snr_score": 1.0,
+      "zcr_score": 0.451997,
+      "bandwidth_score": 0.0,
+      "non_speech_ratio": 0.824088,
+      "threshold": 0.55
+    },
+    "decision": "NOISE"
+  },
+  "noise_classification": {
+    "ast_top10": [
+      {
+        "label": "Dial tone",
+        "probability": 0.46564
+      },
+      {
+        "label": "Sidetone",
+        "probability": 0.336009
+      },
+      {
+        "label": "Speech",
+        "probability": 0.164829
+      },
+      {
+        "label": "Busy signal",
+        "probability": 0.010804
+      },
+      {
+        "label": "Telephone",
+        "probability": 0.006541
+      },
+      {
+        "label": "Inside, small room",
+        "probability": 0.003608
+      },
+      {
+        "label": "Inside, large room or hall",
+        "probability": 0.001454
+      },
+      {
+        "label": "Silence",
+        "probability": 0.00122
+      },
+      {
+        "label": "Music",
+        "probability": 0.001046
+      },
+      {
+        "label": "Conversation",
+        "probability": 0.001007
+      }
+    ],
+    "mapped_type": "STATIC",
+    "mapped_severity": "HIGH",
+    "classification_details": {
+      "raw::Dial tone": 0.46564,
+      "raw::Sidetone": 0.336009,
+      "raw::Speech": 0.164829,
+      "raw::Busy signal": 0.010804,
+      "raw::Telephone": 0.006541,
+      "raw::Inside, small room": 0.003608,
+      "raw::Inside, large room or hall": 0.001454,
+      "raw::Silence": 0.00122,
+      "raw::Music": 0.001046,
+      "raw::Conversation": 0.001007,
+      "aggregated_score": 0.784848,
+      "backend": 1.0
+    },
+    "severity_details": {
+      "severity_score": 0.653094,
+      "snr_component": 0.454404,
+      "noise_ratio": 0.705217,
+      "noise_duration_ratio": 0.824088
+    }
+  },
+  "overlap": {
+    "present": false,
+    "score": 0.573059,
+    "threshold": 0.62,
+    "speech_density": 1.0,
+    "bandwidth_score": 0.0,
+    "centroid_spread_score": 0.476854,
+    "zcr_score": 0.638441,
+    "details": {
+      "speech_density": 1.0,
+      "zcr_score": 0.638441,
+      "bandwidth_score": 0.0,
+      "centroid_spread_score": 0.476854,
+      "threshold": 0.62
+    }
+  },
+  "quality": {
+    "audio_quality": "SEVERELY_IMPAIRED",
+    "quality_score": 56.0001,
+    "snr": 15.91192268450067,
+    "dynamic_range": 22.802036109446224,
+    "speech_ratio": 0.175912,
+    "silence_ratio": 0.8240879999999999,
+    "peak_amplitude": 0.6097087860107422,
+    "clipping_likely": false,
+    "penalties": {
+      "snr_penalty": 19.575724832806223,
+      "clipping_penalty": 0.0,
+      "dynamic_range_penalty": 0.0,
+      "silence_penalty": 15.0,
+      "speech_presence_penalty": 9.424177777777778,
+      "total_penalty": 43.999902610584
+    },
+    "long_silence_present": true,
+    "silence_details": {
+      "largest_silence_seconds": 8.280625,
+      "threshold_largest_silence_seconds": 6.0,
+      "total_silence_ratio": 0.824088,
+      "threshold_total_silence_ratio": 0.55,
+      "speech_ratio": 0.175912,
+      "threshold_min_speech_ratio": 0.35
+    },
+    "thresholds": {
+      "clear": 75.0,
+      "slightly_impaired": 57.0,
+      "snr_good_db": 18.0,
+      "snr_ok_db": 14.8
+    }
+  },
+  "confidence": {
+    "overall": 0.55,
+    "speech": 0.56,
+    "technical": 0.39,
+    "acoustic": 0.71
+  },
+  "prediction": {
+    "emotional_tone": "SATISFIED",
+    "emotional_intensity": "MEDIUM",
+    "background_noise_present": true,
+    "background_noise_type": "STATIC",
+    "background_noise_severity": "HIGH",
+    "audio_quality": "SEVERELY_IMPAIRED",
+    "speaker_overlap_present": false,
+    "long_silence_present": true,
+    "confidence": 0.55
+  },
+  "per_field_comparison": null
+}

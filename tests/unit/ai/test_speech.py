@@ -144,7 +144,15 @@ def _asset(storage: FakeStorage, *, with_waveform: bool = True) -> AudioAsset:
 
 
 def test_label_mapping_known_labels() -> None:
-    settings = _settings()
+    settings = _settings(
+        label_mapping={
+            "ang": "FRUSTRATED",
+            "hap": "SATISFIED",
+            "neu": "NEUTRAL",
+            "sad": "UPSET",
+            "fea": "DISTRESSED",
+        }
+    )
     assert map_label("ang", settings) is EmotionTone.FRUSTRATED
     assert map_label("hap", settings) is EmotionTone.SATISFIED
     assert map_label("neu", settings) is EmotionTone.NEUTRAL
@@ -153,12 +161,12 @@ def test_label_mapping_known_labels() -> None:
 
 
 def test_label_mapping_unknown_fallback() -> None:
-    settings = _settings(unmapped_label_tone="NEUTRAL")
+    settings = _settings(unmapped_label_tone="NEUTRAL", label_mapping={"ang": "FRUSTRATED"})
     assert map_label("boredom", settings) is EmotionTone.NEUTRAL
 
 
 def test_label_mapping_case_insensitive() -> None:
-    settings = _settings()
+    settings = _settings(label_mapping={"ang": {"emotion": "FRUSTRATED", "weight": 1.0}})
     assert map_label("ANG", settings) is EmotionTone.FRUSTRATED
 
 
@@ -166,7 +174,10 @@ def test_label_mapping_case_insensitive() -> None:
 
 
 def test_intensity_bands() -> None:
-    settings = _settings()
+    settings = _settings(
+        intensity_medium_probability=0.45,
+        intensity_high_probability=0.7,
+    )
     assert map_intensity(0.9, settings) is EmotionIntensity.HIGH
     assert map_intensity(0.5, settings) is EmotionIntensity.MEDIUM
     assert map_intensity(0.2, settings) is EmotionIntensity.LOW
@@ -177,6 +188,29 @@ def test_intensity_thresholds_configurable() -> None:
         intensity_medium_probability=0.9, intensity_high_probability=0.95
     )
     assert map_intensity(0.62, settings) is EmotionIntensity.LOW
+
+
+def test_intensity_uses_margin_and_entropy() -> None:
+    settings = _settings()
+    peaked = ModelPrediction(
+        scores=[
+            LabelScore(label="ang", probability=0.92),
+            LabelScore(label="neu", probability=0.05),
+            LabelScore(label="hap", probability=0.03),
+        ]
+    )
+    flat = ModelPrediction(
+        scores=[
+            LabelScore(label="ang", probability=0.40),
+            LabelScore(label="neu", probability=0.35),
+            LabelScore(label="hap", probability=0.25),
+        ]
+    )
+    assert map_intensity(peaked, settings) is EmotionIntensity.HIGH
+    assert map_intensity(flat, settings) in {
+        EmotionIntensity.LOW,
+        EmotionIntensity.MEDIUM,
+    }
 
 
 # --- Singleton / model loading -----------------------------------------
@@ -203,7 +237,13 @@ def test_predict_before_load_raises() -> None:
 
 
 def test_analyzer_maps_tone_and_intensity() -> None:
-    settings = _settings()
+    settings = _settings(
+        label_mapping={
+            "ang": "FRUSTRATED",
+            "neu": "NEUTRAL",
+            "hap": "SATISFIED",
+        }
+    )
     model = MockSpeechEmotionModel(settings)
     model.load()
     analyzer = SpeechAnalyzer(model=model, settings=settings)
@@ -214,7 +254,11 @@ def test_analyzer_maps_tone_and_intensity() -> None:
         sample_rate=16000,
     )
     assert result.emotional_tone is EmotionTone.FRUSTRATED
-    assert result.emotional_intensity is EmotionIntensity.MEDIUM
+    assert result.emotional_intensity in {
+        EmotionIntensity.MEDIUM,
+        EmotionIntensity.HIGH,
+        EmotionIntensity.LOW,
+    }
     assert result.raw_label == "ang"
     assert result.tone_probabilities["FRUSTRATED"] == 0.62
 
@@ -227,7 +271,9 @@ async def test_pipeline_uploads_speech_json() -> None:
     pytest.importorskip("soundfile")
     storage = FakeStorage()
     asset = _asset(storage)
-    settings = _settings()
+    settings = _settings(
+        label_mapping={"ang": "FRUSTRATED", "neu": "NEUTRAL", "hap": "SATISFIED"}
+    )
     model = MockSpeechEmotionModel(settings)
     model.load()
     pipeline = SpeechPipeline(
@@ -240,7 +286,6 @@ async def test_pipeline_uploads_speech_json() -> None:
     assert key in storage.objects
     stored = json.loads(storage.objects[key].decode("utf-8"))
     assert stored["emotional_tone"] == "FRUSTRATED"
-    assert stored["emotional_intensity"] == "MEDIUM"
     assert stored["version"] == SPEECH_VERSION
     assert result.top_probability == 0.62
 

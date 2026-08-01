@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.ai.acoustic.analyzer import AcousticAnalyzer
 from app.ai.acoustic.classifier import HeuristicNoiseClassifier, NoiseClassifier
 from app.ai.acoustic.detector import NoiseDetector, SignalBasedNoiseDetector
+from app.ai.acoustic.event_classifier import HuggingFaceAudioEventClassifier
 from app.ai.acoustic.pipeline import AcousticPipeline
 from app.ai.acoustic.service import AcousticService
 from app.ai.acoustic.severity import (
@@ -27,8 +28,12 @@ def build_noise_detector(settings: AcousticSettings) -> NoiseDetector:
 
 def build_noise_classifier(settings: AcousticSettings) -> NoiseClassifier:
     """Construct the configured noise classifier implementation."""
-    # Swappable: future neural classifier lands here.
-    return HeuristicNoiseClassifier(settings)
+    fallback = HeuristicNoiseClassifier(settings)
+    backend = settings.classifier_backend.strip().lower()
+    if backend in {"heuristic", "signal"}:
+        return fallback
+    # Default: Hugging Face audio-event classification with heuristic fallback.
+    return HuggingFaceAudioEventClassifier(settings, fallback=fallback)
 
 
 def build_severity_estimator(settings: AcousticSettings) -> NoiseSeverityEstimator:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Protocol
 
 from app.ai.technical.schemas import TechnicalResult
@@ -26,7 +27,8 @@ class ConfidenceEstimator(Protocol):
 class WeightedConfidenceEstimator:
     """Weighted-average confidence over engine signals.
 
-    All weights come from PredictionSettings; nothing is hardcoded.
+    All weights come from PredictionSettings and are normalized at estimate time.
+    Speech confidence dominates by default (60/20/20) and reflects model certainty.
     """
 
     def __init__(self, settings: PredictionSettings) -> None:
@@ -70,8 +72,39 @@ class WeightedConfidenceEstimator:
         return breakdown
 
     def _speech_confidence(self, analysis: AnalysisResult) -> float:
-        """Calibrated SER top-1 probability."""
-        return float(analysis.speech.top_probability)
+        """SER certainty from top probability, margin, and entropy when available."""
+        speech = analysis.speech
+        probs = [max(0.0, float(v)) for v in speech.tone_probabilities.values()]
+        if len(probs) >= 2:
+            return self._certainty_from_distribution(probs)
+        return float(speech.top_probability)
+
+    def _certainty_from_distribution(self, probs: list[float]) -> float:
+        total = sum(probs)
+        if total <= 0:
+            return 0.0
+        normalized = [p / total for p in probs]
+        ordered = sorted(normalized, reverse=True)
+        top1 = ordered[0]
+        top2 = ordered[1] if len(ordered) > 1 else 0.0
+        margin = max(0.0, top1 - top2)
+        if len(normalized) == 1:
+            entropy_norm = 0.0
+        else:
+            entropy = -sum(p * math.log(p + 1e-12) for p in normalized)
+            entropy_norm = entropy / math.log(len(normalized))
+        inverse_entropy = 1.0 - entropy_norm
+
+        w_top = self._settings.confidence_speech_top_weight
+        w_margin = self._settings.confidence_speech_margin_weight
+        w_entropy = self._settings.confidence_speech_entropy_weight
+        weight_sum = w_top + w_margin + w_entropy
+        if weight_sum <= 0:
+            return top1
+        certainty = (
+            w_top * top1 + w_margin * margin + w_entropy * inverse_entropy
+        ) / weight_sum
+        return float(min(1.0, max(0.0, certainty)))
 
     def _technical_confidence(self, analysis: AnalysisResult) -> float:
         """Weighted quality / overlap / silence components."""

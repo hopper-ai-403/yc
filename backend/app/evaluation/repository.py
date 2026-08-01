@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy import select
@@ -66,8 +66,16 @@ class SqlAlchemyBatchMetricsRepository(BatchMetricsRepository):
     ) -> BatchMetrics:
         metrics = await self.find_by_batch(batch_id)
         if metrics is None:
-            metrics = BatchMetrics(batch_id=batch_id, computed_at=computed_at)
+            now = datetime.now(timezone.utc)
+            metrics = BatchMetrics(
+                batch_id=batch_id,
+                computed_at=computed_at,
+                created_at=now,
+                updated_at=now,
+            )
             self._session.add(metrics)
+        else:
+            metrics.updated_at = datetime.now(timezone.utc)
         metrics.total_audio = total_audio
         metrics.successful_predictions = successful_predictions
         metrics.failed_predictions = failed_predictions

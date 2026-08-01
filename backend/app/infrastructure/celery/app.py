@@ -4,6 +4,9 @@ from celery import Celery
 
 from app.config.settings import get_settings
 
+# Ensure all ORM relationship targets are registered in the worker process.
+import app.shared.database.models_registry  # noqa: F401
+
 
 def create_celery_app() -> Celery:
     """Create and configure the Celery application."""

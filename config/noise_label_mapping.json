@@ -1,0 +1,334 @@
+{
+  "Music": {
+    "type": "MUSIC",
+    "weight": 1.0
+  },
+  "Musical instrument": {
+    "type": "MUSIC",
+    "weight": 0.9
+  },
+  "Singing": {
+    "type": "MUSIC",
+    "weight": 0.85
+  },
+  "Song": {
+    "type": "MUSIC",
+    "weight": 0.9
+  },
+  "Television": {
+    "type": "TV",
+    "weight": 1.0
+  },
+  "Radio": {
+    "type": "TV",
+    "weight": 0.8
+  },
+  "Speech synthesizer": {
+    "type": "TV",
+    "weight": 0.45
+  },
+  "Static": {
+    "type": "STATIC",
+    "weight": 1.0
+  },
+  "White noise": {
+    "type": "STATIC",
+    "weight": 1.0
+  },
+  "Pink noise": {
+    "type": "STATIC",
+    "weight": 0.95
+  },
+  "Hiss": {
+    "type": "STATIC",
+    "weight": 0.9
+  },
+  "Hum": {
+    "type": "STATIC",
+    "weight": 0.7
+  },
+  "Keyboard (musical)": {
+    "type": "KEYBOARD",
+    "weight": 0.5
+  },
+  "Computer keyboard": {
+    "type": "KEYBOARD",
+    "weight": 1.0
+  },
+  "Typing": {
+    "type": "KEYBOARD",
+    "weight": 1.0
+  },
+  "Clicking": {
+    "type": "KEYBOARD",
+    "weight": 0.7
+  },
+  "Mouse click, mouse button click": {
+    "type": "KEYBOARD",
+    "weight": 0.8
+  },
+  "Traffic noise, roadway noise": {
+    "type": "TRAFFIC",
+    "weight": 1.0
+  },
+  "Car": {
+    "type": "TRAFFIC",
+    "weight": 0.85
+  },
+  "Vehicle": {
+    "type": "TRAFFIC",
+    "weight": 0.8
+  },
+  "Bus": {
+    "type": "TRAFFIC",
+    "weight": 0.85
+  },
+  "Truck": {
+    "type": "TRAFFIC",
+    "weight": 0.85
+  },
+  "Motorcycle": {
+    "type": "TRAFFIC",
+    "weight": 0.8
+  },
+  "Engine": {
+    "type": "TRAFFIC",
+    "weight": 0.7
+  },
+  "Idling": {
+    "type": "TRAFFIC",
+    "weight": 0.65
+  },
+  "Conversation": {
+    "type": "OFFICE_CHATTER",
+    "weight": 1.0
+  },
+  "Narration, monologue": {
+    "type": "NONE",
+    "weight": 0.0
+  },
+  "Speech": {
+    "type": "NONE",
+    "weight": 0.0
+  },
+  "Crowd": {
+    "type": "OFFICE_CHATTER",
+    "weight": 0.9
+  },
+  "Hubbub, speech noise, speech babble": {
+    "type": "OFFICE_CHATTER",
+    "weight": 1.0
+  },
+  "Children shouting": {
+    "type": "OFFICE_CHATTER",
+    "weight": 0.75
+  },
+  "Wind": {
+    "type": "WIND",
+    "weight": 1.0
+  },
+  "Wind noise (microphone)": {
+    "type": "WIND",
+    "weight": 1.0
+  },
+  "Howl (wind)": {
+    "type": "WIND",
+    "weight": 0.9
+  },
+  "Mechanisms": {
+    "type": "MECHANICAL",
+    "weight": 0.9
+  },
+  "Machine gun": {
+    "type": "MECHANICAL",
+    "weight": 0.4
+  },
+  "Tools": {
+    "type": "MECHANICAL",
+    "weight": 0.85
+  },
+  "Power tool": {
+    "type": "MECHANICAL",
+    "weight": 0.95
+  },
+  "Drill": {
+    "type": "MECHANICAL",
+    "weight": 0.95
+  },
+  "Sawing": {
+    "type": "MECHANICAL",
+    "weight": 0.9
+  },
+  "Hammer": {
+    "type": "MECHANICAL",
+    "weight": 0.85
+  },
+  "Printer": {
+    "type": "MECHANICAL",
+    "weight": 0.9
+  },
+  "Vacuum cleaner": {
+    "type": "MECHANICAL",
+    "weight": 0.85
+  },
+  "Air conditioning": {
+    "type": "MECHANICAL",
+    "weight": 0.8
+  },
+  "Fan": {
+    "type": "MECHANICAL",
+    "weight": 0.75
+  },
+  "Refrigerator": {
+    "type": "MECHANICAL",
+    "weight": 0.7
+  },
+  "Silence": {
+    "type": "NONE",
+    "weight": 0.0
+  },
+  "Busy signal": {
+    "type": "STATIC",
+    "weight": 1.0
+  },
+  "Dial tone": {
+    "type": "STATIC",
+    "weight": 1.0
+  },
+  "Inside, large room or hall": {
+    "type": "OTHER",
+    "weight": 0.25
+  },
+  "Inside, small room": {
+    "type": "OTHER",
+    "weight": 0.25
+  },
+  "Outside, urban or manmade": {
+    "type": "TRAFFIC",
+    "weight": 0.45
+  },
+  "Telephone": {
+    "type": "MECHANICAL",
+    "weight": 0.85
+  },
+  "Male speech, man speaking": {
+    "type": "NONE",
+    "weight": 0.0
+  },
+  "Female speech, woman speaking": {
+    "type": "NONE",
+    "weight": 0.0
+  },
+  "Child speech, kid speaking": {
+    "type": "NONE",
+    "weight": 0.0
+  },
+  "Babbling": {
+    "type": "OFFICE_CHATTER",
+    "weight": 0.7
+  },
+  "Whispering": {
+    "type": "NONE",
+    "weight": 0.0
+  },
+  "Laughter": {
+    "type": "OTHER",
+    "weight": 0.5
+  },
+  "Crying, sobbing": {
+    "type": "OTHER",
+    "weight": 0.5
+  },
+  "Applause": {
+    "type": "OTHER",
+    "weight": 0.4
+  },
+  "Clapping": {
+    "type": "OTHER",
+    "weight": 0.4
+  },
+  "Railway": {
+    "type": "TRAFFIC",
+    "weight": 0.8
+  },
+  "Subway, metro, underground": {
+    "type": "TRAFFIC",
+    "weight": 0.85
+  },
+  "Aircraft": {
+    "type": "TRAFFIC",
+    "weight": 0.7
+  },
+  "Helicopter": {
+    "type": "TRAFFIC",
+    "weight": 0.7
+  },
+  "Emergency vehicle": {
+    "type": "TRAFFIC",
+    "weight": 0.75
+  },
+  "Siren": {
+    "type": "TRAFFIC",
+    "weight": 0.7
+  },
+  "Alarm": {
+    "type": "MECHANICAL",
+    "weight": 0.55
+  },
+  "Telephone bell ringing": {
+    "type": "MECHANICAL",
+    "weight": 0.8
+  },
+  "Noise": {
+    "type": "STATIC",
+    "weight": 0.7
+  },
+  "Environmental noise": {
+    "type": "OTHER",
+    "weight": 0.55
+  },
+  "Background noise": {
+    "type": "OTHER",
+    "weight": 0.55
+  },
+  "Rustling leaves": {
+    "type": "WIND",
+    "weight": 0.5
+  },
+  "Rain": {
+    "type": "WIND",
+    "weight": 0.55
+  },
+  "Thunder": {
+    "type": "WIND",
+    "weight": 0.5
+  },
+  "Sidetone": {
+    "type": "STATIC",
+    "weight": 0.95
+  },
+  "Telephone dialing, DTMF": {
+    "type": "MECHANICAL",
+    "weight": 0.9
+  },
+  "Animal": {
+    "type": "OTHER",
+    "weight": 0.2
+  },
+  "Bird": {
+    "type": "OTHER",
+    "weight": 0.2
+  },
+  "Pigeon, dove": {
+    "type": "OTHER",
+    "weight": 0.2
+  },
+  "Frog": {
+    "type": "OTHER",
+    "weight": 0.2
+  },
+  "Coo": {
+    "type": "OTHER",
+    "weight": 0.2
+  }
+}
