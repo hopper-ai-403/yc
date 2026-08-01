@@ -173,6 +173,54 @@ def test_label_mapping_case_insensitive() -> None:
 # --- Intensity mapping --------------------------------------------------
 
 
+def test_neutral_fallback_on_flat_distribution() -> None:
+    from app.ai.speech.inference import select_tone
+
+    settings = _settings(
+        label_mapping={
+            "ang": "FRUSTRATED",
+            "neu": "NEUTRAL",
+            "hap": "SATISFIED",
+            "sad": "UPSET",
+        },
+        neutral_fallback_certainty=0.25,
+    )
+    flat = ModelPrediction(
+        scores=[
+            LabelScore(label="sad", probability=0.28),
+            LabelScore(label="hap", probability=0.26),
+            LabelScore(label="ang", probability=0.24),
+            LabelScore(label="neu", probability=0.22),
+        ]
+    )
+    tone, probabilities = select_tone(flat, settings)
+    assert tone is EmotionTone.NEUTRAL
+    # Raw aggregation is still exposed unchanged for downstream confidence.
+    assert max(probabilities, key=probabilities.get) == "UPSET"
+
+    peaked = ModelPrediction(
+        scores=[
+            LabelScore(label="sad", probability=0.85),
+            LabelScore(label="neu", probability=0.10),
+            LabelScore(label="hap", probability=0.05),
+        ]
+    )
+    tone, _ = select_tone(peaked, settings)
+    assert tone is EmotionTone.UPSET
+
+    disabled = _settings(
+        label_mapping={
+            "ang": "FRUSTRATED",
+            "sad": "UPSET",
+            "hap": "SATISFIED",
+            "neu": "NEUTRAL",
+        },
+        neutral_fallback_certainty=0.0,
+    )
+    tone, _ = select_tone(flat, disabled)
+    assert tone is EmotionTone.UPSET
+
+
 def test_intensity_bands() -> None:
     settings = _settings(
         intensity_medium_probability=0.45,

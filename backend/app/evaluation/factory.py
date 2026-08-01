@@ -47,12 +47,13 @@ def build_evaluation_service(
         signed_url_expiry_seconds=settings.r2.signed_url_expiry_seconds,
     )
     metrics_repo: BatchMetricsRepository = SqlAlchemyBatchMetricsRepository(session)
+    jobs = job_service or build_job_service(session)
     return EvaluationService(
         batches=SqlAlchemyAudioBatchRepository(session),
         jobs=SqlAlchemyJobRepository(session),
         runner=BatchRunner(
             batches=SqlAlchemyAudioBatchRepository(session),
-            jobs=job_service or build_job_service(session),
+            jobs=jobs,
         ),
         pipeline=EvaluationPipeline(
             assets=SqlAlchemyAudioRepository(session),
@@ -65,4 +66,6 @@ def build_evaluation_service(
         exporter=exporter,
         metrics_repo=metrics_repo,
         predictions_export=export_service,
+        job_service=jobs,
+        storage=storage_provider,
     )

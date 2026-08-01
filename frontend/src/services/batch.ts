@@ -1,6 +1,7 @@
-import { get, post, rawClient } from "./client";
+import { get, post, del, rawClient } from "./client";
 
 import type {
+  BatchDeleteRead,
   BatchExportJsonRead,
   BatchExportsRead,
   BatchMetricsRead,
@@ -18,6 +19,10 @@ import type {
 
 export async function runBatch(batchId: string): Promise<BatchRunRead> {
   return post<BatchRunRead>(`/batches/${batchId}/run`);
+}
+
+export async function deleteBatch(batchId: string): Promise<BatchDeleteRead> {
+  return del<BatchDeleteRead>(`/batches/${batchId}`);
 }
 
 export async function getBatchStatus(batchId: string): Promise<BatchStatusRead> {
@@ -78,6 +83,7 @@ export async function cancelJob(jobId: string): Promise<JobActionData> {
 
 export const batchApi = {
   runBatch,
+  deleteBatch,
   getBatchStatus,
   getBatchMetrics,
   getBatchExports,

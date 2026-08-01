@@ -139,6 +139,14 @@ export async function post<T>(
   return response.data;
 }
 
+export async function del<T>(
+  url: string,
+  config?: AxiosRequestConfig,
+): Promise<T> {
+  const response = await apiClient.delete<T>(url, config);
+  return response.data;
+}
+
 /** Raw client for endpoints that bypass the envelope (file downloads). */
 export function rawClient(): AxiosInstance {
   const client = axios.create({ baseURL: `${API_URL}/api/v1`, timeout: 60_000 });

@@ -45,6 +45,13 @@ class FakeStorage:
             raise FileNotFoundError(key)
         return self.objects[key]
 
+    async def delete(self, key: str) -> None:
+        self.objects.pop(key, None)
+
+    async def list(self, prefix: str = "", *, max_keys: int = 1000) -> list[str]:
+        keys = [key for key in self.objects if key.startswith(prefix)]
+        return keys[:max_keys]
+
     async def generate_signed_url(self, key: str, expires_in: int = 3600) -> str:
         return f"https://signed.example.test/{key}?exp={expires_in}"
 
@@ -55,9 +62,18 @@ class FakeStorage:
 class FakeBatches:
     def __init__(self, batch: AudioBatch | None) -> None:
         self.batch = batch
+        self.deleted = False
 
     async def find_by_id(self, batch_id: Any) -> AudioBatch | None:
+        if self.deleted:
+            return None
         return self.batch if self.batch and self.batch.id == batch_id else None
+
+    async def delete(self, batch_id: Any) -> bool:
+        if self.batch is None or self.batch.id != batch_id or self.deleted:
+            return False
+        self.deleted = True
+        return True
 
 
 class FakeJobsRepo:
@@ -72,6 +88,7 @@ class FakeJobService:
     def __init__(self, job: Job) -> None:
         self.job = job
         self.queue_calls = 0
+        self.cancel_calls = 0
 
     async def create_job(self, batch_id: Any) -> Job:
         return self.job
@@ -80,6 +97,30 @@ class FakeJobService:
         self.queue_calls += 1
         self.job.status = JobStatus.QUEUED
         return self.job
+
+    async def cancel_job(self, job_id: Any) -> Job:
+        self.cancel_calls += 1
+        self.job.status = JobStatus.CANCELLED
+        return self.job
+
+
+def _evaluation_service(**overrides: Any) -> EvaluationService:
+    batch = overrides.pop("batch", _batch())
+    job = overrides.pop("job", None)
+    fallback_job = job or (_job(batch.id) if batch is not None else _job(uuid4()))
+    defaults: dict[str, Any] = {
+        "batches": FakeBatches(batch),
+        "jobs": FakeJobsRepo(job),
+        "runner": None,
+        "pipeline": None,
+        "exporter": None,
+        "metrics_repo": FakeMetricsRepo(),
+        "predictions_export": None,
+        "job_service": FakeJobService(fallback_job),
+        "storage": FakeStorage(),
+    }
+    defaults.update(overrides)
+    return EvaluationService(**defaults)  # type: ignore[arg-type]
 
 
 class FakeAssets:
@@ -268,15 +309,7 @@ async def test_status_with_progress_estimate() -> None:
     job.progress = 50
     job.processed_files = 1
     job.started_at = datetime.now(timezone.utc) - timedelta(seconds=30)
-    service = EvaluationService(
-        batches=FakeBatches(batch),  # type: ignore[arg-type]
-        jobs=FakeJobsRepo(job),  # type: ignore[arg-type]
-        runner=None,  # type: ignore[arg-type]
-        pipeline=None,  # type: ignore[arg-type]
-        exporter=None,  # type: ignore[arg-type]
-        metrics_repo=FakeMetricsRepo(),  # type: ignore[arg-type]
-        predictions_export=None,  # type: ignore[arg-type]
-    )
+    service = _evaluation_service(batch=batch, job=job)
     status = await service.get_status(batch.id)
     assert status.job_id == job.id
     assert status.status == "RUNNING"
@@ -288,15 +321,7 @@ async def test_status_with_progress_estimate() -> None:
 @pytest.mark.asyncio
 async def test_status_without_job() -> None:
     batch = _batch()
-    service = EvaluationService(
-        batches=FakeBatches(batch),  # type: ignore[arg-type]
-        jobs=FakeJobsRepo(None),  # type: ignore[arg-type]
-        runner=None,  # type: ignore[arg-type]
-        pipeline=None,  # type: ignore[arg-type]
-        exporter=None,  # type: ignore[arg-type]
-        metrics_repo=FakeMetricsRepo(),  # type: ignore[arg-type]
-        predictions_export=None,  # type: ignore[arg-type]
-    )
+    service = _evaluation_service(batch=batch, job=None)
     status = await service.get_status(batch.id)
     assert status.job_id is None
     assert status.progress == 0
@@ -432,14 +457,10 @@ async def test_csv_export_exact_shape() -> None:
             },
         }
     ]
-    service = EvaluationService(
-        batches=FakeBatches(batch),  # type: ignore[arg-type]
-        jobs=FakeJobsRepo(None),  # type: ignore[arg-type]
-        runner=None,  # type: ignore[arg-type]
-        pipeline=None,  # type: ignore[arg-type]
-        exporter=None,  # type: ignore[arg-type]
-        metrics_repo=FakeMetricsRepo(),  # type: ignore[arg-type]
-        predictions_export=FakePredictionExport(rows),  # type: ignore[arg-type]
+    service = _evaluation_service(
+        batch=batch,
+        job=None,
+        predictions_export=FakePredictionExport(rows),
     )
     csv_text = await service.export_csv(batch.id)
     parsed = list(csv_module.reader(io_module.StringIO(csv_text)))
@@ -450,6 +471,43 @@ async def test_csv_export_exact_shape() -> None:
 
     payload = await service.export_json(batch.id)
     assert set(payload[0]["result"].keys()) == ASSESSMENT_KEYS
+
+
+# --- Delete --------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_delete_batch_cancels_queued_job_and_clears_storage() -> None:
+    batch = _batch()
+    job = _job(batch.id, status=JobStatus.QUEUED)
+    storage = FakeStorage()
+    await storage.upload(f"uploads/{batch.id}/original/a.ogg", b"audio")
+    await storage.upload(f"uploads/{batch.id}/normalized/a.wav", b"wav")
+    job_service = FakeJobService(job)
+    batches = FakeBatches(batch)
+    service = _evaluation_service(
+        batch=batch,
+        job=job,
+        batches=batches,
+        jobs=FakeJobsRepo(job),
+        job_service=job_service,
+        storage=storage,
+    )
+
+    result = await service.delete_batch(batch.id)
+    assert result.batch_id == batch.id
+    assert result.job_cancelled is True
+    assert result.deleted_objects == 2
+    assert job_service.cancel_calls == 1
+    assert batches.deleted is True
+    assert storage.objects == {}
+
+
+@pytest.mark.asyncio
+async def test_delete_batch_missing_raises() -> None:
+    service = _evaluation_service(batch=None, job=None)
+    with pytest.raises(BatchNotFoundForEvaluationException):
+        await service.delete_batch(uuid4())
 
 
 # --- Factory -------------------------------------------------------------

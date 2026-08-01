@@ -18,6 +18,14 @@ class BatchRunRead(BaseModel):
     already_running: bool
 
 
+class BatchDeleteRead(BaseModel):
+    """Response for DELETE /batches/{id}."""
+
+    batch_id: UUID
+    job_cancelled: bool
+    deleted_objects: int = Field(ge=0)
+
+
 class BatchStatusRead(BaseModel):
     """Response for GET /batches/{id}/status."""
 

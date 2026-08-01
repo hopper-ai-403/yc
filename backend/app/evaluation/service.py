@@ -1,8 +1,10 @@
 """Evaluation application service.
 
 Purpose: Reviewer-facing batch execution workflow (run → status → export).
-Responsibilities: Batch run, status monitoring, metrics reads, export access.
-Dependencies: BatchRunner, EvaluationPipeline, BatchExporter, repositories.
+Responsibilities: Batch run, status monitoring, metrics reads, export access,
+batch deletion (frees queue + storage).
+Dependencies: BatchRunner, EvaluationPipeline, BatchExporter, repositories,
+JobService, StorageProvider.
 Extension points: Additional export formats via BatchExporter.
 """
 
@@ -19,6 +21,7 @@ from app.evaluation.pipeline import EvaluationPipeline
 from app.evaluation.repository import BatchMetricsRepository
 from app.evaluation.runner import BatchRunner
 from app.evaluation.schemas import (
+    BatchDeleteRead,
     BatchExportItem,
     BatchExportsRead,
     BatchMetricsRead,
@@ -26,9 +29,11 @@ from app.evaluation.schemas import (
     BatchStatusRead,
 )
 from app.jobs.repository import JobRepository
+from app.jobs.service import JobService
 from app.prediction.export import PredictionExportService
 from app.shared.domain.enums import JobStatus
 from app.shared.logging.setup import get_logger
+from app.shared.storage.provider import StorageProvider
 
 logger = get_logger(__name__)
 
@@ -46,6 +51,8 @@ class EvaluationService:
         exporter: BatchExporter,
         metrics_repo: BatchMetricsRepository,
         predictions_export: PredictionExportService,
+        job_service: JobService,
+        storage: StorageProvider,
     ) -> None:
         self._batches = batches
         self._jobs = jobs
@@ -54,6 +61,8 @@ class EvaluationService:
         self._exporter = exporter
         self._metrics_repo = metrics_repo
         self._predictions_export = predictions_export
+        self._job_service = job_service
+        self._storage = storage
 
     async def run_batch(self, batch_id: UUID) -> BatchRunRead:
         return await self._runner.run(batch_id)
@@ -93,6 +102,70 @@ class EvaluationService:
                 job.processed_files,
             ),
         )
+
+    async def delete_batch(self, batch_id: UUID) -> BatchDeleteRead:
+        """Cancel any active job, remove storage objects, and delete the batch.
+
+        Frees Celery queue capacity for stuck PENDING/QUEUED batches and
+        removes orphaned upload artifacts from object storage.
+        """
+        batch = await self._batches.find_by_id(batch_id)
+        if batch is None:
+            raise BatchNotFoundForEvaluationException(batch_id)
+
+        job = await self._jobs.find_by_batch(batch_id)
+        job_cancelled = False
+        if job is not None and job.status not in {
+            JobStatus.COMPLETED,
+            JobStatus.CANCELLED,
+        }:
+            await self._job_service.cancel_job(job.id)
+            job_cancelled = True
+
+        deleted_objects = await self._delete_storage_prefix(batch_id)
+        deleted = await self._batches.delete(batch_id)
+        if not deleted:
+            raise BatchNotFoundForEvaluationException(batch_id)
+
+        logger.info(
+            "batch_deleted",
+            batch_id=str(batch_id),
+            job_cancelled=job_cancelled,
+            deleted_objects=deleted_objects,
+            status="ok",
+        )
+        return BatchDeleteRead(
+            batch_id=batch_id,
+            job_cancelled=job_cancelled,
+            deleted_objects=deleted_objects,
+        )
+
+    async def _delete_storage_prefix(self, batch_id: UUID) -> int:
+        prefix = f"uploads/{batch_id}/"
+        deleted = 0
+        try:
+            keys = await self._storage.list(prefix, max_keys=1000)
+        except Exception as exc:
+            logger.warning(
+                "batch_storage_list_failed",
+                batch_id=str(batch_id),
+                error=str(exc),
+                status="error",
+            )
+            return 0
+        for key in keys:
+            try:
+                await self._storage.delete(key)
+                deleted += 1
+            except Exception as exc:
+                logger.warning(
+                    "batch_storage_delete_failed",
+                    batch_id=str(batch_id),
+                    storage_key=key,
+                    error=str(exc),
+                    status="error",
+                )
+        return deleted
 
     async def get_metrics(self, batch_id: UUID) -> BatchMetricsRead:
         batch = await self._batches.find_by_id(batch_id)

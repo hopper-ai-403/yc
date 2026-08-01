@@ -6,6 +6,8 @@ import json
 import time
 from uuid import UUID
 
+import numpy as np
+
 from app.ai.acoustic.analyzer import AcousticAnalyzer
 from app.ai.acoustic.exceptions import AcousticArtifactMissingException
 from app.ai.acoustic.schemas import ACOUSTIC_VERSION, AcousticResult
@@ -35,10 +37,8 @@ class AcousticPipeline:
 
     async def _load_optional_waveform(
         self, asset: AudioAsset
-    ) -> tuple[Any, int | None]:
+    ) -> tuple[np.ndarray | None, int | None]:
         """Best-effort load of normalized audio for neural noise classification."""
-        import numpy as np
-
         if not asset.normalized_storage_key:
             return None, None
         try:

@@ -10,6 +10,7 @@ from fastapi.responses import Response
 
 from app.evaluation.dependencies import get_evaluation_service
 from app.evaluation.schemas import (
+    BatchDeleteRead,
     BatchExportJsonRead,
     BatchExportsRead,
     BatchMetricsRead,
@@ -38,6 +39,22 @@ async def run_batch(
         else "Batch execution queued"
     )
     return SuccessResponse(message=message, data=data)
+
+
+@router.delete(
+    "/batches/{batch_id}",
+    response_model=SuccessResponse[BatchDeleteRead],
+    summary="Delete a batch, cancel its job, and free queue capacity",
+)
+async def delete_batch(
+    batch_id: UUID,
+    service: EvaluationService = Depends(get_evaluation_service),
+) -> SuccessResponse[BatchDeleteRead]:
+    data = await service.delete_batch(batch_id)
+    return SuccessResponse(
+        message="Batch deleted",
+        data=data,
+    )
 
 
 @router.get(

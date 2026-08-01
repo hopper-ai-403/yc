@@ -244,6 +244,12 @@ export interface BatchRunRead {
   already_running: boolean;
 }
 
+export interface BatchDeleteRead {
+  batch_id: string;
+  job_cancelled: boolean;
+  deleted_objects: number;
+}
+
 export interface BatchStatusRead {
   batch_id: string;
   job_id: string | null;

@@ -43,10 +43,37 @@ class AcousticAnalyzer:
             artifact.vad,
         )
 
-        if present:
-            bind = getattr(self._classifier, "bind_waveform", None)
-            if bind is not None and waveform is not None:
+        bind = getattr(self._classifier, "bind_waveform", None)
+        if bind is not None and waveform is not None:
+            try:
+                bind(
+                    waveform,
+                    sample_rate or artifact.sample_rate,
+                    vad=artifact.vad,
+                )
+            except TypeError:
+                # Older / heuristic binders accept only (waveform, sample_rate).
                 bind(waveform, sample_rate or artifact.sample_rate)
+            # Model-detected background events can rescue presence when the
+            # signal-level detector under-fires (steady beds barely move SNR).
+            evidence = getattr(self._classifier, "event_presence_evidence", None)
+            if evidence is not None:
+                evidence_score, evidence_present = evidence()
+                noise_details = {
+                    **noise_details,
+                    "event_evidence_score": evidence_score,
+                }
+                if not present and evidence_present:
+                    present = True
+                    noise_score = round(max(noise_score, evidence_score), 6)
+                    logger.info(
+                        "background_noise_presence_from_events",
+                        audio_id=artifact.audio_id,
+                        evidence_score=evidence_score,
+                        status="ok",
+                    )
+
+        if present:
             noise_type, classification_details = self._classifier.classify(
                 artifact.features,
                 artifact.vad,
@@ -62,6 +89,9 @@ class AcousticAnalyzer:
             severity = NoiseSeverity.NONE
             classification_details: dict[str, Any] = {}
             severity_details = {}
+            clear = getattr(self._classifier, "clear_waveform", None)
+            if clear is not None:
+                clear()
 
         result = AcousticResult(
             audio_id=artifact.audio_id,

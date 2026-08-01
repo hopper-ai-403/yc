@@ -71,11 +71,13 @@ class SignalBasedNoiseDetector:
             # High non-speech share with real energy implies background activity.
             non_speech_ratio = 1.0 - vad.speech_ratio
 
+            # SNR dominates: conversational pauses inflate non_speech_ratio on
+            # clean calls and must not alone mark background noise present.
             score = (
-                0.45 * snr_score
+                0.55 * snr_score
                 + 0.2 * zcr_score
-                + 0.15 * bandwidth_score
-                + 0.2 * non_speech_ratio
+                + 0.1 * bandwidth_score
+                + 0.15 * non_speech_ratio
             )
             score = float(min(1.0, max(0.0, score)))
             present = score >= self._settings.noise_presence_score_threshold

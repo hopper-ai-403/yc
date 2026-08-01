@@ -317,8 +317,9 @@ class AcousticSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="ACOUSTIC_", extra="ignore")
 
     # Noise detection thresholds (calibrated on call-recording distributions).
-    noise_snr_threshold_db: float = 18.0
-    noise_presence_score_threshold: float = 0.55
+    # Full-noise at/below noise_snr_threshold_db; clean at/above severity_snr_zero_at_db.
+    noise_snr_threshold_db: float = 15.0
+    noise_presence_score_threshold: float = 0.5
     noise_silence_zcr_min: float = 0.04
     noise_silence_zcr_max: float = 0.25
     noise_bandwidth_min_hz: float = 2500.0
@@ -328,7 +329,7 @@ class AcousticSettings(BaseSettings):
     severity_medium_threshold: float = 0.35
     severity_high_threshold: float = 0.65
     severity_snr_full_at_db: float = 5.0
-    severity_snr_zero_at_db: float = 25.0
+    severity_snr_zero_at_db: float = 20.0
     severity_noise_ratio_weight: float = 0.35
     severity_snr_weight: float = 0.35
     severity_noise_duration_weight: float = 0.3
@@ -349,6 +350,14 @@ class AcousticSettings(BaseSettings):
     event_device: str = "cpu"
     event_top_k: int = 10
     event_min_score: float = 0.02
+    # Model-evidence presence gate: strongest mapped non-NONE event score at or
+    # above this marks noise as present even if the signal detector under-fires.
+    # Lower when classifying silence regions where media beds score modestly.
+    event_presence_score: float = 0.08
+    # Silence-region AST: prefer non-speech clips for background classification.
+    event_silence_min_seconds: float = 1.5
+    event_silence_max_clip_seconds: float = 10.0
+    event_silence_max_total_seconds: float = 60.0
     event_label_mapping_path: str = "config/noise_label_mapping.json"
     event_label_mapping: dict[str, object] = Field(default_factory=dict)
 
@@ -374,9 +383,19 @@ class SpeechSettings(BaseSettings):
     device: str = "cpu"
     top_k: int | None = None
 
+    # Chunked inference for long audio: SER models are trained on short
+    # utterances, so long calls are split into windows and duration-weighted
+    # averaged. <= 0 disables chunking.
+    chunk_seconds: float = 8.0
+    chunk_min_seconds: float = 1.0
+
     # Intensity calibration from combined certainty score (calibrated).
-    intensity_medium_probability: float = 0.52
+    intensity_medium_probability: float = 0.2
     intensity_high_probability: float = 0.62
+
+    # Abstain to NEUTRAL when prediction certainty is below this floor
+    # (near-flat distributions carry no reliable emotion signal). <= 0 disables.
+    neutral_fallback_certainty: float = 0.25
     intensity_top_weight: float = 0.5
     intensity_margin_weight: float = 0.3
     intensity_entropy_weight: float = 0.2

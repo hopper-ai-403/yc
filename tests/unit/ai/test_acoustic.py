@@ -156,6 +156,64 @@ def _asset(analysis_json: dict[str, Any] | None = None) -> AudioAsset:
     return asset
 
 
+def test_noise_absent_clean_high_snr() -> None:
+    """Conversational pauses alone must not mark a high-SNR call as noisy."""
+    settings = _settings(noise_snr_threshold_db=15.0, severity_snr_zero_at_db=20.0)
+    detector = SignalBasedNoiseDetector(settings)
+    features = _features(
+        snr_estimate=18.5,
+        zero_crossing_rate=0.12,
+        spectral_bandwidth=1400.0,
+    )
+    vad = _vad(speech_ratio=0.31, speech_duration=9.0)
+    present, score, _ = detector.detect(features, vad)
+    assert present is False
+    assert score < settings.noise_presence_score_threshold
+
+
+def test_event_presence_rescues_underfired_detector() -> None:
+    """AST evidence can force presence when the signal detector under-fires."""
+
+    class StubEventClassifier:
+        def __init__(self) -> None:
+            self.bound = False
+
+        def bind_waveform(self, *_args: Any, **_kwargs: Any) -> None:
+            self.bound = True
+
+        def event_presence_evidence(self) -> tuple[float, bool]:
+            return 0.42, True
+
+        def classify(self, *_args: Any, **_kwargs: Any) -> tuple[NoiseType, dict[str, float]]:
+            return NoiseType.TV, {"aggregated_score": 0.42, "backend": 1.0}
+
+        def clear_waveform(self) -> None:
+            return None
+
+    settings = _settings()
+    analyzer = AcousticAnalyzer(
+        detector=SignalBasedNoiseDetector(settings),
+        classifier=StubEventClassifier(),  # type: ignore[arg-type]
+        severity=DeterministicSeverityEstimator(settings),
+    )
+    # High-SNR clean-looking features → detector false; AST rescues.
+    artifact = _artifact(
+        uuid4(),
+        uuid4(),
+        features_snr_estimate=22.0,
+        features_zero_crossing_rate=0.05,
+        features_spectral_bandwidth=1200.0,
+        vad_speech_ratio=0.8,
+    )
+    result = analyzer.analyze(
+        artifact,
+        waveform=__import__("numpy").zeros(16000, dtype="float32"),
+        sample_rate=16000,
+    )
+    assert result.background_noise_present is True
+    assert result.background_noise_type is NoiseType.TV
+
+
 # --- Detection ---------------------------------------------------------
 
 

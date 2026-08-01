@@ -127,6 +127,16 @@ def select_tone(
     normalized = {
         key: round(value, 6) for key, value in sorted(aggregated.items(), key=lambda x: -x[1])
     }
+
+    # Abstention rule: when the prediction distribution is too flat to trust
+    # (certainty below the configured floor), asserting a specific emotion is
+    # worse than declaring NEUTRAL. Disabled when the floor is <= 0.
+    fallback_floor = settings.neutral_fallback_certainty
+    if fallback_floor > 0 and winner != EmotionTone.NEUTRAL.value:
+        certainty = _prediction_certainty(prediction, settings)
+        if certainty < fallback_floor:
+            return EmotionTone.NEUTRAL, normalized
+
     return EmotionTone(winner), normalized
 
 

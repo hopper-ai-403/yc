@@ -9,6 +9,7 @@ from uuid import UUID
 from app.ai.speech.analyzer import SpeechAnalyzer
 from app.ai.speech.exceptions import SpeechArtifactMissingException
 from app.ai.speech.schemas import SPEECH_VERSION, SpeechResult
+from app.audio.analysis.schemas import TimeSegment
 from app.audio.analysis.signal import load_waveform
 from app.audio.models import AudioAsset
 from app.config.settings import SpeechSettings
@@ -59,11 +60,13 @@ class SpeechPipeline:
             raw,
             expected_sample_rate=self._settings.expected_sample_rate,
         )
+        speech_segments = self._load_speech_segments(asset)
         result = self._analyzer.analyze(
             audio_id=str(asset.id),
             batch_id=str(asset.batch_id),
             waveform=waveform,
             sample_rate=sample_rate,
+            speech_segments=speech_segments,
         )
 
         key = speech_storage_key(asset.batch_id, asset.id)
@@ -86,3 +89,27 @@ class SpeechPipeline:
             status="ok",
         )
         return result
+
+    @staticmethod
+    def _load_speech_segments(asset: AudioAsset) -> list[TimeSegment] | None:
+        """Best-effort VAD speech segments from the analysis artifact."""
+        payload = asset.analysis_json
+        if not isinstance(payload, dict):
+            return None
+        vad = payload.get("vad")
+        if not isinstance(vad, dict):
+            return None
+        raw_segments = vad.get("speech_segments")
+        if not isinstance(raw_segments, list) or not raw_segments:
+            return None
+        segments: list[TimeSegment] = []
+        for item in raw_segments:
+            if not isinstance(item, dict):
+                continue
+            try:
+                segments.append(
+                    TimeSegment(start=float(item["start"]), end=float(item["end"]))
+                )
+            except (KeyError, TypeError, ValueError):
+                continue
+        return segments or None

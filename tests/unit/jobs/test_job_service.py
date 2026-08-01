@@ -50,8 +50,11 @@ class FakeBatches:
     def __init__(self, batch: AudioBatch) -> None:
         self.batch = batch
         self.statuses: list[BatchStatus] = []
+        self.deleted = False
 
     async def find_by_id(self, batch_id: Any) -> AudioBatch | None:
+        if self.deleted:
+            return None
         return self.batch if self.batch.id == batch_id else None
 
     async def update_status(self, batch_id: Any, status: BatchStatus) -> AudioBatch:
@@ -63,7 +66,13 @@ class FakeBatches:
         return batch
 
     async def list_by_uploader(self, uploader_id: Any) -> list[AudioBatch]:
-        return [self.batch]
+        return [] if self.deleted else [self.batch]
+
+    async def delete(self, batch_id: Any) -> bool:
+        if self.batch.id != batch_id or self.deleted:
+            return False
+        self.deleted = True
+        return True
 
 
 class FakeAssets:
@@ -91,6 +100,7 @@ class FakeCache:
         self.status: dict[str, str] = {}
         self.progress: dict[str, dict[str, Any]] = {}
         self.heartbeats: dict[str, str] = {}
+        self.celery_tasks: dict[str, str] = {}
 
     async def set_status(self, job_id: Any, status: str) -> None:
         self.status[str(job_id)] = status
@@ -112,17 +122,31 @@ class FakeCache:
     ) -> None:
         return None
 
+    async def set_celery_task_id(self, job_id: Any, celery_task_id: str) -> None:
+        self.celery_tasks[str(job_id)] = celery_task_id
+
+    async def get_celery_task_id(self, job_id: Any) -> str | None:
+        return self.celery_tasks.get(str(job_id))
+
     async def clear_job(self, job_id: Any) -> None:
-        self.status.pop(str(job_id), None)
+        key = str(job_id)
+        self.status.pop(key, None)
+        self.progress.pop(key, None)
+        self.heartbeats.pop(key, None)
+        self.celery_tasks.pop(key, None)
 
 
 class FakeDispatcher:
     def __init__(self) -> None:
         self.calls: list[tuple[Any, int]] = []
+        self.revoked: list[str] = []
 
     def enqueue_batch(self, job_id: Any, *, countdown: int = 0) -> str:
         self.calls.append((job_id, countdown))
         return f"task-{len(self.calls)}"
+
+    def revoke_batch(self, celery_task_id: str) -> None:
+        self.revoked.append(celery_task_id)
 
 
 def _make_asset(
@@ -227,9 +251,12 @@ async def test_start_complete_and_progress() -> None:
 
 @pytest.mark.asyncio
 async def test_cancel_job() -> None:
-    service, _, _, _, job = _build_service(job_status=JobStatus.QUEUED)
+    service, dispatcher, cache, _, job = _build_service(job_status=JobStatus.QUEUED)
+    await cache.set_celery_task_id(job.id, "task-queued-1")
     cancelled = await service.cancel_job(job.id)
     assert cancelled.status is JobStatus.CANCELLED
+    assert dispatcher.revoked == ["task-queued-1"]
+    assert cache.celery_tasks.get(str(job.id)) is None
 
 
 @pytest.mark.asyncio

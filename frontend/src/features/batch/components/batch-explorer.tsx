@@ -7,10 +7,11 @@ import {
   Eye,
   FolderSearch,
   RefreshCw,
+  Trash2,
   Upload,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { motion } from "framer-motion";
 
 import {
@@ -42,7 +43,10 @@ import {
   formatDateTime,
   formatDurationMs,
 } from "@/lib/format";
+import { notify } from "@/lib/notify";
 import { useDebounce } from "@/hooks/use-debounce";
+import { deleteBatch } from "@/services/batch";
+import { ApiError } from "@/services/client";
 import { useUiStore } from "@/stores/ui-store";
 import type { JobRead, JobStatus } from "@/types/domain";
 
@@ -81,6 +85,8 @@ export function BatchExplorer() {
   const [page, setPage] = useState(1);
   const [sortKey, setSortKey] = useState<SortKey>("created_at");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isDeleting, startDeleteTransition] = useTransition();
 
   const debouncedSearch = useDebounce(search, 250);
   const exports = useExportActions();
@@ -156,6 +162,44 @@ export function BatchExplorer() {
     ) : (
       <ArrowDown className="size-3" />
     );
+  };
+
+  const handleDelete = (job: JobRead) => {
+    const label = shortId(job.batch_id);
+    const confirmed = window.confirm(
+      `Delete batch ${label}? This cancels any queued/running job, removes uploaded files, and frees queue capacity.`,
+    );
+    if (!confirmed) return;
+
+    setDeletingId(job.batch_id);
+    startDeleteTransition(() => {
+      void (async () => {
+        try {
+          const result = await deleteBatch(job.batch_id);
+          notify.success("Batch deleted", {
+            description: result.job_cancelled
+              ? `Job cancelled · ${result.deleted_objects} objects removed`
+              : `${result.deleted_objects} objects removed`,
+            id: `batch-delete-${job.batch_id}`,
+          });
+          await jobsQuery.refetch();
+        } catch (error) {
+          const message =
+            error instanceof ApiError
+              ? error.message
+              : error instanceof Error
+                ? error.message
+                : "Delete failed";
+          notify.error("Failed to delete batch", {
+            description: message,
+            onRetry: () => handleDelete(job),
+            id: `batch-delete-${job.batch_id}`,
+          });
+        } finally {
+          setDeletingId(null);
+        }
+      })();
+    });
   };
 
   return (
@@ -307,6 +351,7 @@ export function BatchExplorer() {
                 <tbody>
                   {sorted.map((job, index) => {
                     const metrics = byBatchId.get(job.batch_id);
+                    const busy = isDeleting && deletingId === job.batch_id;
                     return (
                       <motion.tr
                         key={job.id}
@@ -379,6 +424,17 @@ export function BatchExplorer() {
                               onCsv={exports.exportCsv}
                               onJson={exports.exportJson}
                             />
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              aria-label="Delete batch"
+                              title="Delete batch (free queue)"
+                              disabled={busy || isDeleting}
+                              className="text-muted-foreground hover:text-destructive"
+                              onClick={() => handleDelete(job)}
+                            >
+                              <Trash2 />
+                            </Button>
                           </div>
                         </td>
                       </motion.tr>

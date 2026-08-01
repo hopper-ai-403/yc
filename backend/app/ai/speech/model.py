@@ -112,16 +112,32 @@ class HuggingFaceSpeechEmotionModel:
                 "Model not loaded; call load() before predict()",
             )
         try:
-            outputs: Any = self._pipeline(
-                {"raw": waveform, "sampling_rate": sample_rate},
-                top_k=self._settings.top_k,
-            )
-            scores = [
-                LabelScore(label=str(item["label"]), probability=float(item["score"]))
-                for item in outputs
-            ]
-            if not scores:
+            chunks = self._split_chunks(waveform, sample_rate)
+            accumulated: dict[str, float] = {}
+            total_weight = 0.0
+            for chunk in chunks:
+                outputs: Any = self._pipeline(
+                    {"raw": chunk, "sampling_rate": sample_rate},
+                    top_k=self._settings.top_k,
+                )
+                if not outputs:
+                    continue
+                weight = float(len(chunk))
+                total_weight += weight
+                for item in outputs:
+                    label = str(item["label"])
+                    accumulated[label] = (
+                        accumulated.get(label, 0.0) + float(item["score"]) * weight
+                    )
+            if not accumulated or total_weight <= 0:
                 raise SpeechInferenceException("Model returned no scores")
+            scores = [
+                LabelScore(
+                    label=label,
+                    probability=min(1.0, max(0.0, value / total_weight)),
+                )
+                for label, value in accumulated.items()
+            ]
             return ModelPrediction(scores=scores)
         except SpeechInferenceException:
             raise
@@ -130,6 +146,28 @@ class HuggingFaceSpeechEmotionModel:
                 "Hugging Face SER inference failed",
                 details={"error": str(exc)},
             ) from exc
+
+    def _split_chunks(
+        self, waveform: np.ndarray, sample_rate: int
+    ) -> list[np.ndarray]:
+        """Split long audio into fixed windows for chunked inference.
+
+        SER models are trained on short utterances, so probabilities from a
+        single pass over a multi-minute call are unreliable. Chunk-level
+        predictions are averaged weighted by chunk duration. Disabled when
+        chunk_seconds <= 0 or the waveform fits in one window.
+        """
+        chunk_seconds = self._settings.chunk_seconds
+        chunk_samples = int(chunk_seconds * sample_rate)
+        if chunk_seconds <= 0 or len(waveform) <= chunk_samples:
+            return [waveform]
+        min_samples = int(self._settings.chunk_min_seconds * sample_rate)
+        chunks: list[np.ndarray] = []
+        for start in range(0, len(waveform), chunk_samples):
+            chunk = waveform[start : start + chunk_samples]
+            if len(chunk) >= max(1, min_samples):
+                chunks.append(chunk)
+        return chunks or [waveform]
 
     def metadata(self) -> ModelMetadata:
         labels: list[str] = []

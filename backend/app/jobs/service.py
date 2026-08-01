@@ -86,6 +86,7 @@ class JobService:
         job = await self._require_job(job_id)
         if job.status is JobStatus.QUEUED:
             task_id = self._dispatcher.enqueue_batch(job.id, countdown=countdown)
+            await self._progress.set_celery_task_id(job.id, task_id)
             logger.info(
                 "job_queue_idempotent",
                 job_id=str(job.id),
@@ -119,6 +120,7 @@ class JobService:
         await self._sync_cache(job)
 
         task_id = self._dispatcher.enqueue_batch(job.id, countdown=countdown)
+        await self._progress.set_celery_task_id(job.id, task_id)
         logger.info(
             "job_queued",
             job_id=str(job.id),
@@ -228,20 +230,28 @@ class JobService:
         return job
 
     async def cancel_job(self, job_id: UUID) -> Job:
-        """Cancel a job that has not finished."""
+        """Cancel a job that has not finished and free its Celery queue slot."""
         job = await self._require_job(job_id)
         if job.status in {JobStatus.COMPLETED, JobStatus.CANCELLED}:
             return job
 
         validate_job_transition(job.status, JobStatus.CANCELLED)
+        celery_task_id = await self._progress.get_celery_task_id(job.id)
+        if celery_task_id:
+            self._dispatcher.revoke_batch(celery_task_id)
+
         job.status = JobStatus.CANCELLED
         job.completed_at = datetime.now(timezone.utc)
         await self._jobs.save(job)
-        await self._sync_cache(job)
+        # Batch has no CANCELLED status; FAILED marks the upload as abandoned.
+        if job.batch_id is not None:
+            await self._batches.update_status(job.batch_id, BatchStatus.FAILED)
+        await self._progress.clear_job(job.id)
 
         logger.info(
             "job_cancelled",
             job_id=str(job.id),
+            celery_task_id=celery_task_id,
             status=job.status.value,
         )
         return job

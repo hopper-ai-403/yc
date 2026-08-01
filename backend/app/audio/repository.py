@@ -34,6 +34,10 @@ class AudioBatchRepository(ABC):
     async def list_by_uploader(self, uploader_id: UUID) -> list[AudioBatch]:
         """List batches uploaded by a user."""
 
+    @abstractmethod
+    async def delete(self, batch_id: UUID) -> bool:
+        """Delete a batch and cascaded children. Returns False if missing."""
+
 
 class AudioRepository(ABC):
     """Persistence contract for AudioAsset entities."""
@@ -174,6 +178,14 @@ class SqlAlchemyAudioBatchRepository(AudioBatchRepository):
         )
         result = await self._session.execute(statement)
         return list(result.scalars().all())
+
+    async def delete(self, batch_id: UUID) -> bool:
+        batch = await self._session.get(AudioBatch, batch_id)
+        if batch is None:
+            return False
+        await self._session.delete(batch)
+        await self._session.flush()
+        return True
 
 
 class SqlAlchemyAudioRepository(AudioRepository):

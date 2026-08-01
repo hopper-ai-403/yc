@@ -204,12 +204,16 @@ def test_quality_poor_audio() -> None:
 
 
 def test_quality_slightly_impaired() -> None:
-    analyzer = AudioQualityAnalyzer(_settings())
+    # Pin band thresholds explicitly so the test is independent of
+    # calibration-tuned defaults.
+    analyzer = AudioQualityAnalyzer(
+        _settings(clear_threshold=90.0, slightly_impaired_threshold=65.0)
+    )
     features = _features(snr_estimate=18.0, dynamic_range=14.0)
     vad = _vad(speech_ratio=0.55)
     quality, _, score = analyzer.score(features, vad)
     assert quality is AudioQuality.SLIGHTLY_IMPAIRED
-    assert 65.0 <= score < 85.0
+    assert 65.0 <= score < 90.0
 
 
 # --- Overlap detection -------------------------------------------------

@@ -37,6 +37,10 @@ class JobProgressCache:
         return f"job:{job_id}:heartbeat"
 
     @staticmethod
+    def celery_task_key(job_id: UUID) -> str:
+        return f"job:{job_id}:celery_task"
+
+    @staticmethod
     def worker_key(hostname: str) -> str:
         return f"worker:{hostname}"
 
@@ -130,12 +134,27 @@ class JobProgressCache:
             ex=self._settings.heartbeat_ttl_seconds,
         )
 
+    async def set_celery_task_id(self, job_id: UUID, celery_task_id: str) -> None:
+        """Remember the Celery task id so cancel/delete can revoke it."""
+        client = await self._ensure_client()
+        await client.set(
+            self.celery_task_key(job_id),
+            celery_task_id,
+            ex=self._settings.progress_ttl_seconds,
+        )
+
+    async def get_celery_task_id(self, job_id: UUID) -> str | None:
+        client = await self._ensure_client()
+        value = await client.get(self.celery_task_key(job_id))
+        return str(value) if value is not None else None
+
     async def clear_job(self, job_id: UUID) -> None:
         client = await self._ensure_client()
         await client.delete(
             self.status_key(job_id),
             self.progress_key(job_id),
             self.heartbeat_key(job_id),
+            self.celery_task_key(job_id),
         )
 
     async def _ensure_client(self):  # type: ignore[no-untyped-def]
