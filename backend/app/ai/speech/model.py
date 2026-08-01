@@ -90,14 +90,24 @@ class HuggingFaceSpeechEmotionModel:
                 details={"error": str(exc)},
             ) from exc
         try:
-            self._pipeline = hf_pipeline(
-                "audio-classification",
-                model=self._settings.model_name,
-                device=self._settings.device,
-            )
+            import torch
+
+            # Bound CPU thread pools so Railway workers don't balloon RAM.
+            torch.set_num_threads(max(1, min(2, torch.get_num_threads())))
+        except Exception:
+            pass
+        try:
+            device = self._settings.device
+            pipeline_kwargs: dict[str, Any] = {
+                "model": self._settings.model_name,
+                "device": device if device != "cpu" else -1,
+                "model_kwargs": {"low_cpu_mem_usage": True},
+            }
+            self._pipeline = hf_pipeline("audio-classification", **pipeline_kwargs)
             logger.info(
                 "speech_model_loaded",
                 model_name=self._settings.model_name,
+                device=device,
                 status="ok",
             )
         except Exception as exc:

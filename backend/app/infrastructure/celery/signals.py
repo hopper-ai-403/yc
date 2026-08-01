@@ -20,15 +20,26 @@ def on_worker_ready(sender: object = None, **kwargs: object) -> None:
     """Warm up singleton models and recover orphaned jobs at worker boot."""
     settings = get_settings()
     try:
+        # Constrain BLAS/torch threads before any model import path runs.
+        try:
+            import torch
+
+            torch.set_num_threads(1)
+        except Exception:
+            pass
+
         state = warmup_models(settings.speech, settings.performance)
         logger.info(
             "worker_ready_warmup",
             loaded_models=state.loaded_models,
             load_durations_ms=state.load_durations_ms,
-            status="ok",
+            warmup_enabled=settings.performance.model_warmup,
+            status="ok" if state.loaded_models or not settings.performance.model_warmup else "degraded",
         )
     except Exception as exc:
         # Warmup failure must not prevent worker boot; first task will retry load.
+        # Note: OS OOM killer (SIGKILL) cannot be caught — disable warmup on small
+        # hosts via PERFORMANCE_MODEL_WARMUP=false and size the worker ≥8GB RAM.
         logger.error(
             "worker_warmup_failed",
             error=str(exc),

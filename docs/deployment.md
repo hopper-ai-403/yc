@@ -237,7 +237,7 @@ SPEECH_DEVICE=cpu
 SPEECH_LABEL_MAPPING_PATH=config/speech_label_mapping.json
 PERFORMANCE_WORKER_CONCURRENCY=1
 PERFORMANCE_PREFETCH_MULTIPLIER=1
-PERFORMANCE_MODEL_WARMUP=true
+PERFORMANCE_MODEL_WARMUP=false
 PERFORMANCE_TASK_TIMEOUT=900
 PERFORMANCE_BATCH_SIZE=10
 ```
@@ -275,31 +275,44 @@ Save the public API base URL (no trailing slash), e.g. `https://aip-api-producti
 | **Builder** | Dockerfile |
 | **Dockerfile path** | `docker/railway.worker.Dockerfile` |
 | Public networking | **Off** (no domain) |
+| **Memory** | **≥ 8 GB** (HuBERT-large ≈ 1.3 GB weights + Torch + AST) |
 
 Worker image installs **ffmpeg** (required for preprocessing).
+
+The Railway worker Dockerfile sets `PERFORMANCE_MODEL_WARMUP=false` so the
+process does **not** download HuBERT at boot. Eager warmup on a small plan
+OOMs the container; Railway restarts it → crash loop every few minutes.
 
 ### 4.2 Environment variables — `worker`
 
 **Duplicate all variables from `api`** (Railway: “Shared variable” / copy service variables).
 
-Extra worker-specific recommendations:
+**Required / strongly recommended for stability:**
 
 ```env
+PERFORMANCE_MODEL_WARMUP=false
 PERFORMANCE_WORKER_CONCURRENCY=1
 CELERY_WORKER_PREFETCH_MULTIPLIER=1
-PERFORMANCE_MODEL_WARMUP=true
+HF_TOKEN=<optional but recommended — higher HF rate limits>
+AI_MODEL_CACHE_DIR=/tmp/model_cache
 ```
 
-Celery command is baked into the Dockerfile (`--concurrency=1`). Do not run multiple worker replicas on a free Redis plan.
+Leave `PREPROCESS_FFMPEG_PATH` / `PREPROCESS_FFPROBE_PATH` empty.
+
+If you still OOM on the **first** audio job after warmup is disabled, raise
+Railway memory to 8 GB (or temporarily set
+`SPEECH_MODEL_NAME` to a smaller public SER checkpoint).
 
 ### 4.3 Verify worker
 
 In Railway logs you should see:
 
 - `celery@… ready`
-- optional `speech_model_loaded` / `model_warmup_completed`
-- overlap: either pyannote load or heuristic fallback warning
+- `model_warmup_skipped` / `warmup_enabled=false` (expected on Railway image)
+- **no** restart loop
 
+Then enqueue one batch and confirm models load during the first task without
+the service crashing.
 ---
 
 ## 5. Vercel — frontend
@@ -373,6 +386,7 @@ Redeploy `api`. Soft refresh the Vercel app.
 | CORS errors in browser | Set `APP_ALLOWED_ORIGINS` to exact Vercel origin; redeploy `api` |
 | API up, jobs never process | Worker not deployed or not sharing Redis URL |
 | `max number of clients reached` | Free Redis quota; one worker only; kill idle clients |
+| Worker crash-loops every few minutes | OOM during HuBERT warmup — set `PERFORMANCE_MODEL_WARMUP=false`, size worker ≥8GB, redeploy `docker/railway.worker.Dockerfile` |
 | Preprocess fails / ffmpeg missing | Use `docker/railway.worker.Dockerfile` (has ffmpeg) |
 | Noise/SER labels wrong / empty mapping | Ensure image includes repo `config/` (railway Dockerfiles do) |
 | Port bind errors on Railway | API must listen on `$PORT` (railway API Dockerfile does) |
