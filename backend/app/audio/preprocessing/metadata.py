@@ -57,6 +57,9 @@ class AudioTechnicalMetadata(BaseModel):
     normalized_codec: str
     normalized_file_size: int | None = Field(default=None, ge=0)
     normalized_duration: float | None = Field(default=None, ge=0)
+    preprocessing_policy_version: str | None = None
+    trim_silence: bool | None = None
+    trim_mode: str | None = None
 
     def to_storage_dict(self) -> dict[str, Any]:
         return self.model_dump(mode="json")

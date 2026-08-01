@@ -1,0 +1,54 @@
+{
+  "success": true,
+  "message": "Batch predictions retrieved",
+  "data": {
+    "count": 3,
+    "predictions": [
+      {
+        "audio_id": "ddef1c96-f480-4374-9e46-3fcb00cabda9",
+        "prediction_version": "1.0.0",
+        "prediction": {
+          "confidence": 0.61,
+          "audio_quality": "CLEAR",
+          "emotional_tone": "UPSET",
+          "emotional_intensity": "HIGH",
+          "long_silence_present": false,
+          "background_noise_type": "TRAFFIC",
+          "speaker_overlap_present": false,
+          "background_noise_present": true,
+          "background_noise_severity": "LOW"
+        }
+      },
+      {
+        "audio_id": "79fde290-0cf3-45fa-9577-78f7be03e9a3",
+        "prediction_version": "1.0.0",
+        "prediction": {
+          "confidence": 0.33,
+          "audio_quality": "CLEAR",
+          "emotional_tone": "NEUTRAL",
+          "emotional_intensity": "MEDIUM",
+          "long_silence_present": false,
+          "background_noise_type": "STATIC",
+          "speaker_overlap_present": false,
+          "background_noise_present": true,
+          "background_noise_severity": "LOW"
+        }
+      },
+      {
+        "audio_id": "1c855204-af35-45c4-89d1-9d79f1835700",
+        "prediction_version": "1.0.0",
+        "prediction": {
+          "confidence": 0.58,
+          "audio_quality": "CLEAR",
+          "emotional_tone": "NEUTRAL",
+          "emotional_intensity": "MEDIUM",
+          "long_silence_present": false,
+          "background_noise_type": "STATIC",
+          "speaker_overlap_present": false,
+          "background_noise_present": true,
+          "background_noise_severity": "LOW"
+        }
+      }
+    ]
+  }
+}

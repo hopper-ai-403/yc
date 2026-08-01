@@ -131,6 +131,13 @@ class AudioRepository(ABC):
     ) -> AudioAsset | None:
         """Persist per-stage pipeline timing metadata onto the asset."""
 
+    @abstractmethod
+    async def invalidate_downstream_artifacts(
+        self,
+        asset_id: UUID,
+    ) -> AudioAsset | None:
+        """Clear stage completion flags and prediction so the pipeline regenerates."""
+
 
 class SqlAlchemyAudioBatchRepository(AudioBatchRepository):
     """SQLAlchemy-backed AudioBatchRepository."""
@@ -341,6 +348,55 @@ class SqlAlchemyAudioRepository(AudioRepository):
         if asset is None:
             return None
         asset.timing_json = dict(timing_json)
+        await self._session.flush()
+        await self._session.refresh(asset)
+        return asset
+
+    async def invalidate_downstream_artifacts(
+        self,
+        asset_id: UUID,
+    ) -> AudioAsset | None:
+        """Clear preprocess completion and all AI stage artifacts for regeneration.
+
+        Deletes the persisted prediction (if any) via the ORM session so the
+        prediction stage can recreate it. Does not touch the original upload.
+        """
+        asset = await self.find_by_id(asset_id)
+        if asset is None:
+            return None
+
+        asset.is_preprocessed = False
+        asset.preprocessed_at = None
+        # Keep normalized_storage_key / metadata until replaced so a failed
+        # reprocess does not leave a dangling "missing key" state mid-flight.
+
+        asset.analysis_completed = False
+        asset.analysis_completed_at = None
+        asset.analysis_storage_key = None
+        asset.analysis_version = None
+        asset.analysis_json = None
+
+        asset.technical_completed = False
+        asset.technical_completed_at = None
+        asset.technical_version = None
+        asset.technical_json = None
+
+        asset.acoustic_completed = False
+        asset.acoustic_completed_at = None
+        asset.acoustic_version = None
+        asset.acoustic_json = None
+
+        asset.speech_completed = False
+        asset.speech_completed_at = None
+        asset.speech_version = None
+        asset.speech_json = None
+
+        asset.timing_json = None
+
+        if asset.prediction is not None:
+            await self._session.delete(asset.prediction)
+            asset.prediction = None
+
         await self._session.flush()
         await self._session.refresh(asset)
         return asset

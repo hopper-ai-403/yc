@@ -1,0 +1,17 @@
+{
+  "success": true,
+  "message": "Batch metrics retrieved",
+  "data": {
+    "batch_id": "893f798a-0d94-44e4-adb1-3b6765f62b3e",
+    "total_audio": 3,
+    "successful_predictions": 3,
+    "failed_predictions": 0,
+    "success_rate": 1.0,
+    "average_processing_time_ms": 91813.85,
+    "min_processing_time_ms": 75592.56,
+    "max_processing_time_ms": 121858.41,
+    "average_confidence": 0.5067,
+    "batch_duration_ms": 115778.93,
+    "computed_at": "2026-08-01T08:03:37.420492Z"
+  }
+}

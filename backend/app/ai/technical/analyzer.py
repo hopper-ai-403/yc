@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import numpy as np
+
 from app.ai.technical.overlap import OverlapDetector
 from app.ai.technical.quality import AudioQualityAnalyzer
 from app.ai.technical.schemas import TECHNICAL_VERSION, TechnicalResult
@@ -26,12 +28,23 @@ class TechnicalAnalyzer:
         self._quality = quality
         self._overlap = overlap
 
-    def analyze(self, artifact: AnalysisArtifact) -> TechnicalResult:
+    def analyze(
+        self,
+        artifact: AnalysisArtifact,
+        *,
+        waveform: np.ndarray | None = None,
+        sample_rate: int | None = None,
+    ) -> TechnicalResult:
         long_silence_present, silence_details = self._silence.detect(artifact.vad)
         audio_quality, breakdown, quality_score = self._quality.score(
             artifact.features,
             artifact.vad,
         )
+
+        bind = getattr(self._overlap, "bind_waveform", None)
+        if bind is not None and waveform is not None:
+            bind(waveform, sample_rate or artifact.sample_rate)
+
         overlap_present, overlap_score, overlap_details = self._overlap.detect(
             artifact.features,
             artifact.vad,

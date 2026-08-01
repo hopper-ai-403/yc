@@ -1,0 +1,11 @@
+{
+  "confidence": 0.61,
+  "audio_quality": "CLEAR",
+  "emotional_tone": "UPSET",
+  "emotional_intensity": "HIGH",
+  "long_silence_present": false,
+  "background_noise_type": "TRAFFIC",
+  "speaker_overlap_present": false,
+  "background_noise_present": true,
+  "background_noise_severity": "LOW"
+}

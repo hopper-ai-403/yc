@@ -1,0 +1,148 @@
+{
+  "speech": {
+    "version": "1.0.0",
+    "audio_id": "79fde290-0cf3-45fa-9577-78f7be03e9a3",
+    "batch_id": "893f798a-0d94-44e4-adb1-3b6765f62b3e",
+    "raw_label": "sad",
+    "model_name": "superb/hubert-large-superb-er",
+    "emotional_tone": "NEUTRAL",
+    "top_probability": 0.375044,
+    "tone_probabilities": {
+      "UPSET": 0.375044,
+      "NEUTRAL": 0.135522,
+      "SATISFIED": 0.329094,
+      "FRUSTRATED": 0.160341
+    },
+    "emotional_intensity": "MEDIUM"
+  },
+  "profile": {
+    "stages": [
+      {
+        "stage": "preprocessing",
+        "status": "ok",
+        "end_time": "2026-08-01T08:01:54.987022+00:00",
+        "start_time": "2026-08-01T08:01:49.319762+00:00",
+        "duration_ms": 5661.5
+      },
+      {
+        "stage": "analysis",
+        "status": "ok",
+        "end_time": "2026-08-01T08:01:58.523935+00:00",
+        "start_time": "2026-08-01T08:01:54.988405+00:00",
+        "duration_ms": 3545.41
+      },
+      {
+        "stage": "technical",
+        "status": "ok",
+        "end_time": "2026-08-01T08:02:02.577810+00:00",
+        "start_time": "2026-08-01T08:01:58.523935+00:00",
+        "duration_ms": 4041.65
+      },
+      {
+        "stage": "acoustic",
+        "status": "ok",
+        "end_time": "2026-08-01T08:02:12.688589+00:00",
+        "start_time": "2026-08-01T08:02:02.577810+00:00",
+        "duration_ms": 10110.78
+      },
+      {
+        "stage": "speech",
+        "status": "ok",
+        "end_time": "2026-08-01T08:02:22.726467+00:00",
+        "start_time": "2026-08-01T08:02:12.688589+00:00",
+        "duration_ms": 10035.92
+      }
+    ],
+    "total_pipeline_duration_ms": 37346.27
+  },
+  "version": "v1.0.0",
+  "acoustic": {
+    "version": "1.0.0",
+    "audio_id": "79fde290-0cf3-45fa-9577-78f7be03e9a3",
+    "batch_id": "893f798a-0d94-44e4-adb1-3b6765f62b3e",
+    "noise_score": 0.302277,
+    "noise_details": {
+      "snr_score": 0.0,
+      "threshold": 0.5,
+      "zcr_score": 0.413006,
+      "bandwidth_score": 0.0,
+      "non_speech_ratio": 0.35163,
+      "event_evidence_score": 0.302277
+    },
+    "severity_details": {
+      "noise_ratio": 0.302277,
+      "snr_component": 0.0,
+      "severity_score": 0.211286,
+      "noise_duration_ratio": 0.35163
+    },
+    "background_noise_type": "STATIC",
+    "classification_details": {
+      "backend": 1.0,
+      "clip_count": 1.0,
+      "raw::Music": 0.011347,
+      "raw::Speech": 0.009313,
+      "raw::Sidetone": 0.010295,
+      "raw::Dial tone": 0.242211,
+      "raw::Telephone": 0.003333,
+      "aggregated_score": 0.302277,
+      "raw::Beep, bleep": 0.024166,
+      "raw::Busy signal": 0.621438,
+      "raw::Sound effect": 0.02467,
+      "silence_region_mode": 0.0,
+      "raw::Telephone bell ringing": 0.003651,
+      "raw::Telephone dialing, DTMF": 0.004217
+    },
+    "background_noise_present": true,
+    "background_noise_severity": "LOW"
+  },
+  "technical": {
+    "version": "1.0.0",
+    "audio_id": "79fde290-0cf3-45fa-9577-78f7be03e9a3",
+    "batch_id": "893f798a-0d94-44e4-adb1-3b6765f62b3e",
+    "audio_quality": "CLEAR",
+    "overlap_score": 0.5222,
+    "quality_score": 83.8638,
+    "overlap_details": {
+      "threshold": 0.62,
+      "zcr_score": 0.592951,
+      "speech_density": 1.0,
+      "bandwidth_score": 0.0,
+      "centroid_spread_score": 0.268049
+    },
+    "silence_details": {
+      "speech_ratio": 0.64837,
+      "total_silence_ratio": 0.35163,
+      "largest_silence_seconds": 0.119313,
+      "threshold_min_speech_ratio": 0.35,
+      "threshold_total_silence_ratio": 0.55,
+      "threshold_largest_silence_seconds": 6.0
+    },
+    "quality_breakdown": {
+      "snr_penalty": 0.0,
+      "total_penalty": 16.136189794268645,
+      "silence_penalty": 0.06112500000000076,
+      "clipping_penalty": 0.0,
+      "dynamic_range_penalty": 16.075064794268645,
+      "speech_presence_penalty": 0.0
+    },
+    "long_silence_present": false,
+    "speaker_overlap_present": false
+  },
+  "confidence": {
+    "speech": 0.21,
+    "overall": 0.33,
+    "acoustic": 0.3,
+    "technical": 0.78
+  },
+  "prediction": {
+    "confidence": 0.33,
+    "audio_quality": "CLEAR",
+    "emotional_tone": "NEUTRAL",
+    "emotional_intensity": "MEDIUM",
+    "long_silence_present": false,
+    "background_noise_type": "STATIC",
+    "speaker_overlap_present": false,
+    "background_noise_present": true,
+    "background_noise_severity": "LOW"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "success": true,
+  "message": "Batch status retrieved",
+  "data": {
+    "batch_id": "893f798a-0d94-44e4-adb1-3b6765f62b3e",
+    "job_id": "ad6e5b9e-fb63-49dc-9415-775305a009ad",
+    "status": "COMPLETED",
+    "progress": 100,
+    "total_files": 3,
+    "processed_files": 3,
+    "failed_files": 0,
+    "started_at": "2026-08-01T08:01:35.456008Z",
+    "completed_at": "2026-08-01T08:03:31.234940Z",
+    "estimated_remaining_seconds": null
+  }
+}

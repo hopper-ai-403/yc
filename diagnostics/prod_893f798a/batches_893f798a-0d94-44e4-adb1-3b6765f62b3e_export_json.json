@@ -1,0 +1,52 @@
+{
+  "success": true,
+  "message": "Batch export retrieved",
+  "data": {
+    "batch_id": "893f798a-0d94-44e4-adb1-3b6765f62b3e",
+    "count": 3,
+    "results": [
+      {
+        "filename": "call_001.ogg",
+        "result": {
+          "emotional_tone": "UPSET",
+          "emotional_intensity": "HIGH",
+          "background_noise_present": true,
+          "background_noise_type": "TRAFFIC",
+          "background_noise_severity": "LOW",
+          "audio_quality": "CLEAR",
+          "speaker_overlap_present": false,
+          "long_silence_present": false,
+          "confidence": 0.61
+        }
+      },
+      {
+        "filename": "call_002.ogg",
+        "result": {
+          "emotional_tone": "NEUTRAL",
+          "emotional_intensity": "MEDIUM",
+          "background_noise_present": true,
+          "background_noise_type": "STATIC",
+          "background_noise_severity": "LOW",
+          "audio_quality": "CLEAR",
+          "speaker_overlap_present": false,
+          "long_silence_present": false,
+          "confidence": 0.33
+        }
+      },
+      {
+        "filename": "call_003.ogg",
+        "result": {
+          "emotional_tone": "NEUTRAL",
+          "emotional_intensity": "MEDIUM",
+          "background_noise_present": true,
+          "background_noise_type": "STATIC",
+          "background_noise_severity": "LOW",
+          "audio_quality": "CLEAR",
+          "speaker_overlap_present": false,
+          "long_silence_present": false,
+          "confidence": 0.58
+        }
+      }
+    ]
+  }
+}

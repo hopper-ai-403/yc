@@ -11,6 +11,8 @@ import pytest
 
 import app.shared.database.models_registry  # noqa: F401
 from app.audio.models import AudioAsset
+from app.audio.preprocessing.exceptions import InvalidMetadataException
+from app.audio.preprocessing.ffmpeg import build_edge_silence_trim_filter
 from app.audio.preprocessing.metadata import (
     AudioTechnicalMetadata,
     ProbeFormat,
@@ -21,6 +23,10 @@ from app.audio.preprocessing.pipeline import (
     PreprocessingPipeline,
     metadata_storage_key,
     normalized_storage_key,
+)
+from app.audio.preprocessing.policy import (
+    PREPROCESSING_POLICY_VERSION,
+    is_preprocessing_stale,
 )
 from app.audio.preprocessing.service import PreprocessingService
 from app.audio.preprocessing.validator import AudioValidator
@@ -72,11 +78,19 @@ class FakeStorage:
 
 class FakeProbe:
     def __init__(
-        self, *, sample_rate: str = "44100", channels: int = 2, codec: str = "pcm_s16le"
+        self,
+        *,
+        sample_rate: str = "44100",
+        channels: int = 2,
+        codec: str = "pcm_s16le",
+        original_duration: str = "45.0",
+        normalized_duration: str = "45.0",
     ) -> None:
         self.sample_rate = sample_rate
         self.channels = channels
         self.codec = codec
+        self.original_duration = original_duration
+        self.normalized_duration = normalized_duration
         self.calls = 0
 
     def probe(self, path: Path) -> ProbeResult:
@@ -90,10 +104,14 @@ class FakeProbe:
                         codec_name="pcm_s16le",
                         sample_rate="16000",
                         channels=1,
-                        duration="0.2",
+                        duration=self.normalized_duration,
                     )
                 ],
-                format=ProbeFormat(format_name="wav", duration="0.2", size="6400"),
+                format=ProbeFormat(
+                    format_name="wav",
+                    duration=self.normalized_duration,
+                    size="6400",
+                ),
             )
         return ProbeResult(
             streams=[
@@ -102,11 +120,15 @@ class FakeProbe:
                     codec_name=self.codec,
                     sample_rate=self.sample_rate,
                     channels=self.channels,
-                    duration="0.2",
+                    duration=self.original_duration,
                     bit_rate="1411200",
                 )
             ],
-            format=ProbeFormat(format_name="wav", duration="0.2", size="17640"),
+            format=ProbeFormat(
+                format_name="wav",
+                duration=self.original_duration,
+                size="17640",
+            ),
         )
 
 
@@ -137,6 +159,7 @@ class FakeNormalizer:
 class FakeAssets:
     def __init__(self, asset: AudioAsset) -> None:
         self.asset = asset
+        self.invalidate_calls = 0
 
     async def create(self, asset: AudioAsset) -> AudioAsset:
         self.asset = asset
@@ -167,6 +190,21 @@ class FakeAssets:
         self.asset.preprocessed_at = kwargs["preprocessed_at"]
         return self.asset
 
+    async def invalidate_downstream_artifacts(self, asset_id: Any) -> AudioAsset:
+        del asset_id
+        self.invalidate_calls += 1
+        self.asset.is_preprocessed = False
+        self.asset.analysis_completed = False
+        self.asset.analysis_json = None
+        self.asset.technical_completed = False
+        self.asset.technical_json = None
+        self.asset.acoustic_completed = False
+        self.asset.acoustic_json = None
+        self.asset.speech_completed = False
+        self.asset.speech_json = None
+        self.asset.prediction = None
+        return self.asset
+
 
 def _asset(*, sample_ext: str = "wav") -> AudioAsset:
     batch_id = uuid4()
@@ -193,17 +231,63 @@ def _pipeline(
     sample_rate: str = "44100",
     channels: int = 2,
     codec: str = "pcm_s16le",
+    original_duration: str = "45.0",
+    normalized_duration: str = "45.0",
+    settings: PreprocessingSettings | None = None,
 ) -> PreprocessingPipeline:
-    settings = PreprocessingSettings()
+    preprocess_settings = settings or PreprocessingSettings()
     ffmpeg = FakeFFmpeg()
     return PreprocessingPipeline(
-        settings=settings,
+        settings=preprocess_settings,
         storage=storage,  # type: ignore[arg-type]
-        ffprobe=FakeProbe(sample_rate=sample_rate, channels=channels, codec=codec),  # type: ignore[arg-type]
+        ffprobe=FakeProbe(  # type: ignore[arg-type]
+            sample_rate=sample_rate,
+            channels=channels,
+            codec=codec,
+            original_duration=original_duration,
+            normalized_duration=normalized_duration,
+        ),
         ffmpeg=ffmpeg,  # type: ignore[arg-type]
-        validator=AudioValidator(settings),
+        validator=AudioValidator(preprocess_settings),
         normalizer=FakeNormalizer(ffmpeg),  # type: ignore[arg-type]
     )
+
+
+def test_edge_trim_filter_never_uses_stop_periods() -> None:
+    filt = build_edge_silence_trim_filter(
+        silence_min_duration_seconds=0.1,
+        silence_threshold_db=-50.0,
+    )
+    assert "stop_periods" not in filt
+    assert "areverse" in filt
+    assert filt.count("silenceremove=") == 2
+
+
+def test_policy_marks_collapsed_and_legacy_metadata_stale() -> None:
+    settings = PreprocessingSettings(trim_silence=False)
+    collapsed = {
+        "duration": 45.0,
+        "normalized_duration": 0.1,
+        "preprocessing_policy_version": PREPROCESSING_POLICY_VERSION,
+        "trim_silence": False,
+        "trim_mode": "none",
+    }
+    assert is_preprocessing_stale(collapsed, settings) is True
+
+    legacy = {
+        "duration": 45.0,
+        "normalized_duration": 45.0,
+    }
+    assert is_preprocessing_stale(legacy, settings) is True
+
+    current = {
+        "duration": 45.0,
+        "normalized_duration": 44.8,
+        "preprocessing_policy_version": PREPROCESSING_POLICY_VERSION,
+        "trim_silence": False,
+        "trim_mode": "none",
+    }
+    assert is_preprocessing_stale(current, settings) is False
 
 
 @pytest.mark.asyncio
@@ -220,12 +304,28 @@ async def test_pipeline_stereo_44k_to_mono_16k_and_r2_upload() -> None:
     assert metadata.normalized_sample_rate == 16000
     assert metadata.normalized_channels == 1
     assert metadata.normalized_codec == "pcm_s16le"
+    assert metadata.preprocessing_policy_version == PREPROCESSING_POLICY_VERSION
+    assert metadata.trim_mode == "none"
 
     wav_key = normalized_storage_key(asset.batch_id, asset.id)
     meta_key = metadata_storage_key(asset.batch_id, asset.id)
     assert wav_key in storage.objects
     assert meta_key in storage.objects
     assert storage.objects[wav_key].startswith(b"RIFF")
+
+
+@pytest.mark.asyncio
+async def test_pipeline_rejects_collapsed_normalized_duration() -> None:
+    storage = FakeStorage()
+    asset = _asset()
+    storage.objects[asset.storage_key] = b"RIFF" + b"\x00" * 64
+    pipeline = _pipeline(
+        storage,
+        original_duration="45.0",
+        normalized_duration="0.1",
+    )
+    with pytest.raises(InvalidMetadataException, match="collapsed"):
+        await pipeline.run(asset)
 
 
 @pytest.mark.asyncio
@@ -250,7 +350,7 @@ async def test_service_idempotency_skips_completed() -> None:
     asset.is_preprocessed = True
     asset.normalized_storage_key = normalized_storage_key(asset.batch_id, asset.id)
     asset.metadata_json = AudioTechnicalMetadata(
-        duration=1.0,
+        duration=45.0,
         sample_rate=16000,
         channels=1,
         codec="pcm_s16le",
@@ -259,6 +359,10 @@ async def test_service_idempotency_skips_completed() -> None:
         normalized_sample_rate=16000,
         normalized_channels=1,
         normalized_codec="pcm_s16le",
+        normalized_duration=45.0,
+        preprocessing_policy_version=PREPROCESSING_POLICY_VERSION,
+        trim_silence=False,
+        trim_mode="none",
     ).to_storage_dict()
 
     class BoomPipeline:
@@ -268,9 +372,47 @@ async def test_service_idempotency_skips_completed() -> None:
     service = PreprocessingService(
         assets=FakeAssets(asset),  # type: ignore[arg-type]
         pipeline=BoomPipeline(),  # type: ignore[arg-type]
+        settings=PreprocessingSettings(trim_silence=False),
     )
     result = await service.preprocess_audio(asset.id)
     assert result.normalized_sample_rate == 16000
+
+
+@pytest.mark.asyncio
+async def test_service_reprocesses_stale_and_invalidates_downstream() -> None:
+    asset = _asset()
+    asset.is_preprocessed = True
+    asset.analysis_completed = True
+    asset.analysis_json = {"vad": True}
+    asset.normalized_storage_key = normalized_storage_key(asset.batch_id, asset.id)
+    # Legacy / collapsed artifact from mid-call silence trim.
+    asset.metadata_json = {
+        "duration": 45.0,
+        "normalized_duration": 0.1,
+        "sample_rate": 44100,
+        "channels": 1,
+        "codec": "pcm_s16le",
+        "container": "wav",
+        "file_size": 100,
+        "normalized_sample_rate": 16000,
+        "normalized_channels": 1,
+        "normalized_codec": "pcm_s16le",
+    }
+
+    storage = FakeStorage()
+    storage.objects[asset.storage_key] = b"RIFF" + b"\x00" * 64
+    assets = FakeAssets(asset)
+    service = PreprocessingService(
+        assets=assets,  # type: ignore[arg-type]
+        pipeline=_pipeline(storage),
+        settings=PreprocessingSettings(trim_silence=False),
+    )
+    meta = await service.preprocess_audio(asset.id)
+    assert assets.invalidate_calls == 1
+    assert assets.asset.is_preprocessed is True
+    assert assets.asset.analysis_completed is False
+    assert meta.normalized_duration == 45.0
+    assert meta.preprocessing_policy_version == PREPROCESSING_POLICY_VERSION
 
 
 @pytest.mark.asyncio
@@ -282,9 +424,11 @@ async def test_service_persists_metadata() -> None:
     service = PreprocessingService(
         assets=assets,  # type: ignore[arg-type]
         pipeline=_pipeline(storage),
+        settings=PreprocessingSettings(),
     )
     meta = await service.preprocess_audio(asset.id)
     assert assets.asset.is_preprocessed is True
     assert assets.asset.normalized_storage_key is not None
     assert assets.asset.metadata_json is not None
-    assert meta.duration == 0.2
+    assert meta.duration == 45.0
+    assert meta.normalized_duration == 45.0

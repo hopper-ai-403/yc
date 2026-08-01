@@ -20,6 +20,27 @@ _MEAN_VOLUME_RE = re.compile(r"mean_volume:\s*([-\d.]+)\s*dB")
 _MAX_VOLUME_RE = re.compile(r"max_volume:\s*([-\d.]+)\s*dB")
 
 
+def build_edge_silence_trim_filter(
+    *,
+    silence_min_duration_seconds: float,
+    silence_threshold_db: float,
+) -> str:
+    """Build an ffmpeg filter that removes only leading and trailing silence.
+
+    Mid-call conversational pauses must be preserved. Never use
+    ``stop_periods`` on the forward stream — that truncates at the first
+    internal silence longer than ``silence_min_duration_seconds``.
+    """
+    start = (
+        "silenceremove="
+        f"start_periods=1:"
+        f"start_duration={silence_min_duration_seconds}:"
+        f"start_threshold={silence_threshold_db}dB"
+    )
+    # Reverse → trim new start (former end) → reverse back.
+    return f"{start},areverse,{start},areverse"
+
+
 class FFmpegClient:
     """Runs ffmpeg for normalization and loudness measurement."""
 
@@ -53,15 +74,16 @@ class FFmpegClient:
         input_path: Path,
         output_path: Path,
     ) -> None:
-        """Convert to mono 16kHz 16-bit PCM WAV with optional silence trim + LUFS."""
+        """Convert to mono 16kHz 16-bit PCM WAV with optional edge trim + LUFS."""
         filters: list[str] = []
         if self._settings.trim_silence:
             filters.append(
-                "silenceremove="
-                f"start_periods=1:start_duration={self._settings.silence_min_duration_seconds}:"
-                f"start_threshold={self._settings.silence_threshold_db}dB:"
-                f"stop_periods=1:stop_duration={self._settings.silence_min_duration_seconds}:"
-                f"stop_threshold={self._settings.silence_threshold_db}dB"
+                build_edge_silence_trim_filter(
+                    silence_min_duration_seconds=(
+                        self._settings.silence_min_duration_seconds
+                    ),
+                    silence_threshold_db=self._settings.silence_threshold_db,
+                )
             )
         filters.append(
             "loudnorm="
@@ -96,6 +118,8 @@ class FFmpegClient:
             output=str(output_path),
             sample_rate=self._settings.target_sample_rate,
             channels=self._settings.target_channels,
+            trim_silence=self._settings.trim_silence,
+            trim_mode="edges" if self._settings.trim_silence else "none",
         )
         self._run(command, timeout=self._settings.ffmpeg_timeout_seconds)
         if not output_path.exists() or output_path.stat().st_size == 0:

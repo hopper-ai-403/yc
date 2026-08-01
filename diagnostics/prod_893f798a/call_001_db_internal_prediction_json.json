@@ -1,0 +1,148 @@
+{
+  "speech": {
+    "version": "1.0.0",
+    "audio_id": "ddef1c96-f480-4374-9e46-3fcb00cabda9",
+    "batch_id": "893f798a-0d94-44e4-adb1-3b6765f62b3e",
+    "raw_label": "sad",
+    "model_name": "superb/hubert-large-superb-er",
+    "emotional_tone": "UPSET",
+    "top_probability": 0.751133,
+    "tone_probabilities": {
+      "UPSET": 0.751133,
+      "NEUTRAL": 0.030658,
+      "SATISFIED": 0.218131,
+      "FRUSTRATED": 7.7e-05
+    },
+    "emotional_intensity": "HIGH"
+  },
+  "profile": {
+    "stages": [
+      {
+        "stage": "preprocessing",
+        "status": "ok",
+        "end_time": "2026-08-01T08:01:55.869473+00:00",
+        "start_time": "2026-08-01T08:01:50.039136+00:00",
+        "duration_ms": 5818.95
+      },
+      {
+        "stage": "analysis",
+        "status": "ok",
+        "end_time": "2026-08-01T08:02:05.372811+00:00",
+        "start_time": "2026-08-01T08:01:55.888008+00:00",
+        "duration_ms": 9484.44
+      },
+      {
+        "stage": "technical",
+        "status": "ok",
+        "end_time": "2026-08-01T08:02:09.269151+00:00",
+        "start_time": "2026-08-01T08:02:05.506482+00:00",
+        "duration_ms": 3764.46
+      },
+      {
+        "stage": "acoustic",
+        "status": "ok",
+        "end_time": "2026-08-01T08:02:20.405106+00:00",
+        "start_time": "2026-08-01T08:02:09.278536+00:00",
+        "duration_ms": 11130.27
+      },
+      {
+        "stage": "speech",
+        "status": "ok",
+        "end_time": "2026-08-01T08:02:24.987557+00:00",
+        "start_time": "2026-08-01T08:02:20.422361+00:00",
+        "duration_ms": 4561.68
+      }
+    ],
+    "total_pipeline_duration_ms": 39911.53
+  },
+  "version": "v1.0.0",
+  "acoustic": {
+    "version": "1.0.0",
+    "audio_id": "ddef1c96-f480-4374-9e46-3fcb00cabda9",
+    "batch_id": "893f798a-0d94-44e4-adb1-3b6765f62b3e",
+    "noise_score": 0.209313,
+    "noise_details": {
+      "snr_score": 0.0,
+      "threshold": 0.5,
+      "zcr_score": 0.375698,
+      "bandwidth_score": 0.0,
+      "non_speech_ratio": 0.0,
+      "event_evidence_score": 0.209313
+    },
+    "severity_details": {
+      "noise_ratio": 0.209313,
+      "snr_component": 0.0,
+      "severity_score": 0.07326,
+      "noise_duration_ratio": 0.0
+    },
+    "background_noise_type": "TRAFFIC",
+    "classification_details": {
+      "backend": 1.0,
+      "raw::Car": 0.080655,
+      "clip_count": 1.0,
+      "raw::Music": 0.072893,
+      "raw::Train": 0.021822,
+      "raw::Truck": 0.012256,
+      "raw::Animal": 0.01327,
+      "raw::Speech": 0.125333,
+      "raw::Vehicle": 0.175944,
+      "aggregated_score": 0.209313,
+      "silence_region_mode": 0.0,
+      "raw::Motor vehicle (road)": 0.01281,
+      "raw::Railroad car, train wagon": 0.013417,
+      "raw::Accelerating, revving, vroom": 0.012553
+    },
+    "background_noise_present": true,
+    "background_noise_severity": "LOW"
+  },
+  "technical": {
+    "version": "1.0.0",
+    "audio_id": "ddef1c96-f480-4374-9e46-3fcb00cabda9",
+    "batch_id": "893f798a-0d94-44e4-adb1-3b6765f62b3e",
+    "audio_quality": "CLEAR",
+    "overlap_score": 0.568797,
+    "quality_score": 100.0,
+    "overlap_details": {
+      "threshold": 0.62,
+      "zcr_score": 0.549425,
+      "speech_density": 1.0,
+      "bandwidth_score": 0.095368,
+      "centroid_spread_score": 0.425349
+    },
+    "silence_details": {
+      "speech_ratio": 1.0,
+      "total_silence_ratio": 0.0,
+      "largest_silence_seconds": 0.0,
+      "threshold_min_speech_ratio": 0.35,
+      "threshold_total_silence_ratio": 0.55,
+      "threshold_largest_silence_seconds": 6.0
+    },
+    "quality_breakdown": {
+      "snr_penalty": 0.0,
+      "total_penalty": 0.0,
+      "silence_penalty": 0.0,
+      "clipping_penalty": 0.0,
+      "dynamic_range_penalty": 0.0,
+      "speech_presence_penalty": 0.0
+    },
+    "long_silence_present": false,
+    "speaker_overlap_present": false
+  },
+  "confidence": {
+    "speech": 0.64,
+    "overall": 0.61,
+    "acoustic": 0.21,
+    "technical": 0.86
+  },
+  "prediction": {
+    "confidence": 0.61,
+    "audio_quality": "CLEAR",
+    "emotional_tone": "UPSET",
+    "emotional_intensity": "HIGH",
+    "long_silence_present": false,
+    "background_noise_type": "TRAFFIC",
+    "speaker_overlap_present": false,
+    "background_noise_present": true,
+    "background_noise_severity": "LOW"
+  }
+}

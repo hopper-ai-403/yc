@@ -222,9 +222,13 @@ class PreprocessingSettings(BaseSettings):
     target_lufs: float = -23.0
     target_true_peak_db: float = -1.5
     loudness_range: float = 11.0
-    trim_silence: bool = True
+    # When True, trim only leading/trailing silence (never mid-call pauses).
+    # Default False: preserve conversational pacing for downstream AI.
+    trim_silence: bool = False
     silence_threshold_db: float = -50.0
     silence_min_duration_seconds: float = 0.1
+    # Max |normalized - original| / original when trim_silence is disabled.
+    max_duration_delta_ratio: float = 0.02
     allowed_codecs: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: [
             "pcm_s16le",
@@ -296,7 +300,15 @@ class TechnicalSettings(BaseSettings):
     speech_ratio_good: float = 0.6
     speech_ratio_bad: float = 0.15
 
-    # Overlap heuristics (signal-based detector; threshold calibrated).
+    # Overlap detection backend: "pyannote" (default) or "heuristic".
+    # When pyannote deps/auth/model are unavailable, factory and detector
+    # fall back to the signal-based heuristic automatically.
+    overlap_backend: str = "pyannote"
+    overlap_model_name: str = "pyannote/overlapped-speech-detection"
+    overlap_hf_token: str | None = None
+    overlap_device: str = "cpu"
+
+    # Overlap heuristics (signal-based detector; also used as fallback).
     overlap_threshold: float = 0.62
     overlap_density_weight: float = 0.35
     overlap_zcr_weight: float = 0.2
@@ -309,6 +321,15 @@ class TechnicalSettings(BaseSettings):
     overlap_bandwidth_max_hz: float = 5000.0
     overlap_spread_min: float = 0.4
     overlap_spread_max: float = 1.4
+
+    @field_validator("overlap_backend", mode="before")
+    @classmethod
+    def normalize_overlap_backend(cls, value: object) -> object:
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"pyannote", "heuristic"}:
+                return normalized
+        return value
 
 
 class AcousticSettings(BaseSettings):

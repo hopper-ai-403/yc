@@ -1,0 +1,39 @@
+{
+  "version": "1.0.0",
+  "audio_id": "ddef1c96-f480-4374-9e46-3fcb00cabda9",
+  "batch_id": "893f798a-0d94-44e4-adb1-3b6765f62b3e",
+  "noise_score": 0.209313,
+  "noise_details": {
+    "snr_score": 0.0,
+    "threshold": 0.5,
+    "zcr_score": 0.375698,
+    "bandwidth_score": 0.0,
+    "non_speech_ratio": 0.0,
+    "event_evidence_score": 0.209313
+  },
+  "severity_details": {
+    "noise_ratio": 0.209313,
+    "snr_component": 0.0,
+    "severity_score": 0.07326,
+    "noise_duration_ratio": 0.0
+  },
+  "background_noise_type": "TRAFFIC",
+  "classification_details": {
+    "backend": 1.0,
+    "raw::Car": 0.080655,
+    "clip_count": 1.0,
+    "raw::Music": 0.072893,
+    "raw::Train": 0.021822,
+    "raw::Truck": 0.012256,
+    "raw::Animal": 0.01327,
+    "raw::Speech": 0.125333,
+    "raw::Vehicle": 0.175944,
+    "aggregated_score": 0.209313,
+    "silence_region_mode": 0.0,
+    "raw::Motor vehicle (road)": 0.01281,
+    "raw::Railroad car, train wagon": 0.013417,
+    "raw::Accelerating, revving, vroom": 0.012553
+  },
+  "background_noise_present": true,
+  "background_noise_severity": "LOW"
+}

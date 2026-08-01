@@ -1,0 +1,376 @@
+{
+  "audio_id": "1c855204-af35-45c4-89d1-9d79f1835700",
+  "filename": "call_003.ogg",
+  "normalized_storage_key": "uploads/893f798a-0d94-44e4-adb1-3b6765f62b3e/normalized/1c855204-af35-45c4-89d1-9d79f1835700.wav",
+  "analysis_storage_key": "uploads/893f798a-0d94-44e4-adb1-3b6765f62b3e/analysis/1c855204-af35-45c4-89d1-9d79f1835700.json",
+  "acoustic_version": "1.0.0",
+  "speech_version": "1.0.0",
+  "technical_version": "1.0.0",
+  "acoustic_json": {
+    "version": "1.0.0",
+    "audio_id": "1c855204-af35-45c4-89d1-9d79f1835700",
+    "batch_id": "893f798a-0d94-44e4-adb1-3b6765f62b3e",
+    "noise_score": 0.368078,
+    "noise_details": {
+      "snr_score": 0.519694,
+      "threshold": 0.5,
+      "zcr_score": 0.308531,
+      "bandwidth_score": 0.0,
+      "non_speech_ratio": 0.136931,
+      "event_evidence_score": 0.199166
+    },
+    "severity_details": {
+      "noise_ratio": 0.368078,
+      "snr_component": 0.173231,
+      "severity_score": 0.230538,
+      "noise_duration_ratio": 0.136931
+    },
+    "background_noise_type": "STATIC",
+    "classification_details": {
+      "backend": 1.0,
+      "clip_count": 1.0,
+      "raw::Music": 0.001134,
+      "raw::Speech": 0.391379,
+      "raw::Sidetone": 0.001248,
+      "raw::Dial tone": 0.531207,
+      "raw::Telephone": 0.017315,
+      "aggregated_score": 0.199166,
+      "raw::Beep, bleep": 0.000916,
+      "raw::Busy signal": 0.037838,
+      "raw::Sound effect": 0.00096,
+      "silence_region_mode": 0.0,
+      "raw::Inside, small room": 0.001642,
+      "raw::Telephone bell ringing": 0.002182
+    },
+    "background_noise_present": true,
+    "background_noise_severity": "LOW"
+  },
+  "speech_json": {
+    "version": "1.0.0",
+    "audio_id": "1c855204-af35-45c4-89d1-9d79f1835700",
+    "batch_id": "893f798a-0d94-44e4-adb1-3b6765f62b3e",
+    "raw_label": "neu",
+    "model_name": "superb/hubert-large-superb-er",
+    "emotional_tone": "NEUTRAL",
+    "top_probability": 0.696263,
+    "tone_probabilities": {
+      "UPSET": 0.011169,
+      "NEUTRAL": 0.696263,
+      "SATISFIED": 0.189515,
+      "FRUSTRATED": 0.103054
+    },
+    "emotional_intensity": "MEDIUM"
+  },
+  "technical_json": {
+    "version": "1.0.0",
+    "audio_id": "1c855204-af35-45c4-89d1-9d79f1835700",
+    "batch_id": "893f798a-0d94-44e4-adb1-3b6765f62b3e",
+    "audio_quality": "CLEAR",
+    "overlap_score": 0.546624,
+    "quality_score": 86.6212,
+    "overlap_details": {
+      "threshold": 0.62,
+      "zcr_score": 0.471064,
+      "speech_density": 1.0,
+      "bandwidth_score": 0.0,
+      "centroid_spread_score": 0.512055
+    },
+    "silence_details": {
+      "speech_ratio": 0.863069,
+      "total_silence_ratio": 0.136931,
+      "largest_silence_seconds": 0.161688,
+      "threshold_min_speech_ratio": 0.35,
+      "threshold_total_silence_ratio": 0.55,
+      "threshold_largest_silence_seconds": 6.0
+    },
+    "quality_breakdown": {
+      "snr_penalty": 5.610658455135066,
+      "total_penalty": 13.378823988303381,
+      "silence_penalty": 0.0,
+      "clipping_penalty": 0.0,
+      "dynamic_range_penalty": 7.768165533168316,
+      "speech_presence_penalty": 0.0
+    },
+    "long_silence_present": false,
+    "speaker_overlap_present": false
+  },
+  "analysis_json": {
+    "vad": {
+      "speech_end": 3.21,
+      "speech_ratio": 0.863069,
+      "speech_start": 0.0,
+      "largest_silence": 0.161688,
+      "speech_duration": 2.91,
+      "speech_segments": [
+        {
+          "end": 0.76,
+          "start": 0.0
+        },
+        {
+          "end": 1.19,
+          "start": 0.77
+        },
+        {
+          "end": 1.42,
+          "start": 1.2
+        },
+        {
+          "end": 1.68,
+          "start": 1.44
+        },
+        {
+          "end": 1.9,
+          "start": 1.74
+        },
+        {
+          "end": 2.29,
+          "start": 1.98
+        },
+        {
+          "end": 2.7,
+          "start": 2.39
+        },
+        {
+          "end": 3.21,
+          "start": 2.72
+        }
+      ],
+      "silence_segments": [
+        {
+          "end": 0.77,
+          "start": 0.76
+        },
+        {
+          "end": 1.2,
+          "start": 1.19
+        },
+        {
+          "end": 1.44,
+          "start": 1.42
+        },
+        {
+          "end": 1.74,
+          "start": 1.68
+        },
+        {
+          "end": 1.98,
+          "start": 1.9
+        },
+        {
+          "end": 2.39,
+          "start": 2.29
+        },
+        {
+          "end": 2.72,
+          "start": 2.7
+        },
+        {
+          "end": 3.3716875,
+          "start": 3.21
+        }
+      ]
+    },
+    "version": "1.0.0",
+    "audio_id": "1c855204-af35-45c4-89d1-9d79f1835700",
+    "batch_id": "893f798a-0d94-44e4-adb1-3b6765f62b3e",
+    "features": {
+      "mfcc": [
+        -343.51934814453125,
+        104.82763671875,
+        -19.286245346069336,
+        8.47104549407959,
+        -20.64336395263672,
+        -16.6263370513916,
+        -30.115625381469727,
+        -13.72663402557373,
+        -21.010927200317383,
+        -3.270200252532959,
+        -12.675437927246094,
+        -4.441488265991211,
+        0.7464134693145752
+      ],
+      "duration": 3.371688,
+      "pitch_f0": 227.98650458890228,
+      "rms_energy": 0.0500536784529686,
+      "sample_rate": 16000,
+      "snr_estimate": 17.401529764785593,
+      "dynamic_range": 13.33910068009901,
+      "peak_amplitude": 0.23248291015625,
+      "tempo_estimate": 117.1875,
+      "spectral_rolloff": 2247.1255896226417,
+      "spectral_centroid": 1280.3834868171607,
+      "spectral_bandwidth": 1167.7805469208406,
+      "zero_crossing_rate": 0.10479160524764151
+    },
+    "sample_rate": 16000
+  },
+  "prediction_version": "1.0.0",
+  "prediction_json": {
+    "confidence": 0.58,
+    "audio_quality": "CLEAR",
+    "emotional_tone": "NEUTRAL",
+    "emotional_intensity": "MEDIUM",
+    "long_silence_present": false,
+    "background_noise_type": "STATIC",
+    "speaker_overlap_present": false,
+    "background_noise_present": true,
+    "background_noise_severity": "LOW"
+  },
+  "internal_prediction_json": {
+    "speech": {
+      "version": "1.0.0",
+      "audio_id": "1c855204-af35-45c4-89d1-9d79f1835700",
+      "batch_id": "893f798a-0d94-44e4-adb1-3b6765f62b3e",
+      "raw_label": "neu",
+      "model_name": "superb/hubert-large-superb-er",
+      "emotional_tone": "NEUTRAL",
+      "top_probability": 0.696263,
+      "tone_probabilities": {
+        "UPSET": 0.011169,
+        "NEUTRAL": 0.696263,
+        "SATISFIED": 0.189515,
+        "FRUSTRATED": 0.103054
+      },
+      "emotional_intensity": "MEDIUM"
+    },
+    "profile": {
+      "stages": [
+        {
+          "stage": "preprocessing",
+          "status": "ok",
+          "end_time": "2026-08-01T08:02:47.840099+00:00",
+          "start_time": "2026-08-01T08:02:40.067985+00:00",
+          "duration_ms": 7781.02
+        },
+        {
+          "stage": "analysis",
+          "status": "ok",
+          "end_time": "2026-08-01T08:02:51.757457+00:00",
+          "start_time": "2026-08-01T08:02:47.850678+00:00",
+          "duration_ms": 3907.28
+        },
+        {
+          "stage": "technical",
+          "status": "ok",
+          "end_time": "2026-08-01T08:02:55.235466+00:00",
+          "start_time": "2026-08-01T08:02:51.759218+00:00",
+          "duration_ms": 3487.89
+        },
+        {
+          "stage": "acoustic",
+          "status": "ok",
+          "end_time": "2026-08-01T08:03:01.636178+00:00",
+          "start_time": "2026-08-01T08:02:55.247909+00:00",
+          "duration_ms": 6392.47
+        },
+        {
+          "stage": "speech",
+          "status": "ok",
+          "end_time": "2026-08-01T08:03:08.985926+00:00",
+          "start_time": "2026-08-01T08:03:01.636178+00:00",
+          "duration_ms": 7350.54
+        }
+      ],
+      "total_pipeline_duration_ms": 34072.09
+    },
+    "version": "v1.0.0",
+    "acoustic": {
+      "version": "1.0.0",
+      "audio_id": "1c855204-af35-45c4-89d1-9d79f1835700",
+      "batch_id": "893f798a-0d94-44e4-adb1-3b6765f62b3e",
+      "noise_score": 0.368078,
+      "noise_details": {
+        "snr_score": 0.519694,
+        "threshold": 0.5,
+        "zcr_score": 0.308531,
+        "bandwidth_score": 0.0,
+        "non_speech_ratio": 0.136931,
+        "event_evidence_score": 0.199166
+      },
+      "severity_details": {
+        "noise_ratio": 0.368078,
+        "snr_component": 0.173231,
+        "severity_score": 0.230538,
+        "noise_duration_ratio": 0.136931
+      },
+      "background_noise_type": "STATIC",
+      "classification_details": {
+        "backend": 1.0,
+        "clip_count": 1.0,
+        "raw::Music": 0.001134,
+        "raw::Speech": 0.391379,
+        "raw::Sidetone": 0.001248,
+        "raw::Dial tone": 0.531207,
+        "raw::Telephone": 0.017315,
+        "aggregated_score": 0.199166,
+        "raw::Beep, bleep": 0.000916,
+        "raw::Busy signal": 0.037838,
+        "raw::Sound effect": 0.00096,
+        "silence_region_mode": 0.0,
+        "raw::Inside, small room": 0.001642,
+        "raw::Telephone bell ringing": 0.002182
+      },
+      "background_noise_present": true,
+      "background_noise_severity": "LOW"
+    },
+    "technical": {
+      "version": "1.0.0",
+      "audio_id": "1c855204-af35-45c4-89d1-9d79f1835700",
+      "batch_id": "893f798a-0d94-44e4-adb1-3b6765f62b3e",
+      "audio_quality": "CLEAR",
+      "overlap_score": 0.546624,
+      "quality_score": 86.6212,
+      "overlap_details": {
+        "threshold": 0.62,
+        "zcr_score": 0.471064,
+        "speech_density": 1.0,
+        "bandwidth_score": 0.0,
+        "centroid_spread_score": 0.512055
+      },
+      "silence_details": {
+        "speech_ratio": 0.863069,
+        "total_silence_ratio": 0.136931,
+        "largest_silence_seconds": 0.161688,
+        "threshold_min_speech_ratio": 0.35,
+        "threshold_total_silence_ratio": 0.55,
+        "threshold_largest_silence_seconds": 6.0
+      },
+      "quality_breakdown": {
+        "snr_penalty": 5.610658455135066,
+        "total_penalty": 13.378823988303381,
+        "silence_penalty": 0.0,
+        "clipping_penalty": 0.0,
+        "dynamic_range_penalty": 7.768165533168316,
+        "speech_presence_penalty": 0.0
+      },
+      "long_silence_present": false,
+      "speaker_overlap_present": false
+    },
+    "confidence": {
+      "speech": 0.58,
+      "overall": 0.58,
+      "acoustic": 0.37,
+      "technical": 0.79
+    },
+    "prediction": {
+      "confidence": 0.58,
+      "audio_quality": "CLEAR",
+      "emotional_tone": "NEUTRAL",
+      "emotional_intensity": "MEDIUM",
+      "long_silence_present": false,
+      "background_noise_type": "STATIC",
+      "speaker_overlap_present": false,
+      "background_noise_present": true,
+      "background_noise_severity": "LOW"
+    }
+  },
+  "emotional_tone": "NEUTRAL",
+  "emotional_intensity": "MEDIUM",
+  "background_noise_present": true,
+  "background_noise_type": "STATIC",
+  "background_noise_severity": "LOW",
+  "audio_quality": "CLEAR",
+  "speaker_overlap": false,
+  "long_silence": false,
+  "confidence": 0.58
+}

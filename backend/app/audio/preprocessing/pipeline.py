@@ -19,6 +19,12 @@ from app.audio.preprocessing.ffmpeg import FFmpegClient
 from app.audio.preprocessing.ffprobe import FFprobeClient
 from app.audio.preprocessing.metadata import AudioTechnicalMetadata, ProbeResult
 from app.audio.preprocessing.normalizer import AudioNormalizer
+from app.audio.preprocessing.policy import (
+    duration_delta_ratio,
+    is_duration_collapsed,
+    is_duration_out_of_tolerance,
+    preprocessing_fingerprint,
+)
 from app.audio.preprocessing.validator import AudioValidator
 from app.config.settings import PreprocessingSettings
 from app.shared.logging.setup import get_logger
@@ -92,6 +98,7 @@ class PreprocessingPipeline:
                 peak_db=peak_db,
                 rms_db=rms_db,
             )
+            self._assert_duration_integrity(metadata, audio_id=asset.id)
 
             upload_ms = await self._upload(
                 asset,
@@ -243,6 +250,7 @@ class PreprocessingPipeline:
         if normalized_duration is None and normalized_probe.format is not None:
             normalized_duration = self._float(normalized_probe.format.duration)
 
+        fingerprint = preprocessing_fingerprint(self._settings)
         return AudioTechnicalMetadata(
             duration=duration,
             sample_rate=sample_rate,
@@ -258,7 +266,55 @@ class PreprocessingPipeline:
             normalized_codec=self._normalizer.target_codec,
             normalized_file_size=normalized_size,
             normalized_duration=normalized_duration,
+            preprocessing_policy_version=fingerprint["preprocessing_policy_version"],
+            trim_silence=fingerprint["trim_silence"],
+            trim_mode=fingerprint["trim_mode"],
         )
+
+    def _assert_duration_integrity(
+        self,
+        metadata: AudioTechnicalMetadata,
+        *,
+        audio_id: UUID,
+    ) -> None:
+        """Reject collapsed or out-of-tolerance normalized audio."""
+        original = metadata.duration
+        normalized = metadata.normalized_duration
+        if is_duration_collapsed(original, normalized):
+            raise InvalidMetadataException(
+                "Normalized audio duration collapsed; conversational audio must "
+                "not be reduced to a sub-second clip",
+                details={
+                    "audio_id": str(audio_id),
+                    "original_duration": original,
+                    "normalized_duration": normalized,
+                },
+            )
+
+        if self._settings.trim_silence:
+            return
+
+        if is_duration_out_of_tolerance(
+            original,
+            normalized,
+            max_delta_ratio=self._settings.max_duration_delta_ratio,
+        ):
+            ratio = (
+                duration_delta_ratio(original, normalized)
+                if normalized is not None
+                else None
+            )
+            raise InvalidMetadataException(
+                "Normalized duration differs from original by more than "
+                f"{self._settings.max_duration_delta_ratio:.0%}",
+                details={
+                    "audio_id": str(audio_id),
+                    "original_duration": original,
+                    "normalized_duration": normalized,
+                    "delta_ratio": ratio,
+                    "max_delta_ratio": self._settings.max_duration_delta_ratio,
+                },
+            )
 
     @staticmethod
     def _first_audio_stream(probe: ProbeResult):

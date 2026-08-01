@@ -1,0 +1,16 @@
+{
+  "version": "1.0.0",
+  "audio_id": "ddef1c96-f480-4374-9e46-3fcb00cabda9",
+  "batch_id": "893f798a-0d94-44e4-adb1-3b6765f62b3e",
+  "raw_label": "sad",
+  "model_name": "superb/hubert-large-superb-er",
+  "emotional_tone": "UPSET",
+  "top_probability": 0.751133,
+  "tone_probabilities": {
+    "UPSET": 0.751133,
+    "NEUTRAL": 0.030658,
+    "SATISFIED": 0.218131,
+    "FRUSTRATED": 7.7e-05
+  },
+  "emotional_intensity": "HIGH"
+}

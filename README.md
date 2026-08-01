@@ -4,6 +4,9 @@ cd \backend"
 .\.venv\Scripts\activate
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
+run worker after activating venve
+celery -A app.infrastructure.celery.app.celery_app worker --loglevel=info --pool=solo -Q default
+
 cd \frontend"
 npm run dev -- --port 3100
 

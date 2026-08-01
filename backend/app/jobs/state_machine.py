@@ -30,8 +30,8 @@ AUDIO_TRANSITIONS: dict[AudioStatus, set[AudioStatus]] = {
         AudioStatus.FAILED,
         AudioStatus.QUEUED,
     },
-    AudioStatus.PROCESSED: {AudioStatus.COMPLETED},
-    AudioStatus.COMPLETED: set(),
+    AudioStatus.PROCESSED: {AudioStatus.COMPLETED, AudioStatus.QUEUED},
+    AudioStatus.COMPLETED: {AudioStatus.QUEUED},
     AudioStatus.FAILED: {AudioStatus.QUEUED},
 }
 

@@ -1,0 +1,33 @@
+{
+  "version": "1.0.0",
+  "audio_id": "79fde290-0cf3-45fa-9577-78f7be03e9a3",
+  "batch_id": "893f798a-0d94-44e4-adb1-3b6765f62b3e",
+  "audio_quality": "CLEAR",
+  "overlap_score": 0.5222,
+  "quality_score": 83.8638,
+  "overlap_details": {
+    "threshold": 0.62,
+    "zcr_score": 0.592951,
+    "speech_density": 1.0,
+    "bandwidth_score": 0.0,
+    "centroid_spread_score": 0.268049
+  },
+  "silence_details": {
+    "speech_ratio": 0.64837,
+    "total_silence_ratio": 0.35163,
+    "largest_silence_seconds": 0.119313,
+    "threshold_min_speech_ratio": 0.35,
+    "threshold_total_silence_ratio": 0.55,
+    "threshold_largest_silence_seconds": 6.0
+  },
+  "quality_breakdown": {
+    "snr_penalty": 0.0,
+    "total_penalty": 16.136189794268645,
+    "silence_penalty": 0.06112500000000076,
+    "clipping_penalty": 0.0,
+    "dynamic_range_penalty": 16.075064794268645,
+    "speech_presence_penalty": 0.0
+  },
+  "long_silence_present": false,
+  "speaker_overlap_present": false
+}

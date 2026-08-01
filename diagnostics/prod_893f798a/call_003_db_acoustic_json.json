@@ -1,0 +1,39 @@
+{
+  "version": "1.0.0",
+  "audio_id": "1c855204-af35-45c4-89d1-9d79f1835700",
+  "batch_id": "893f798a-0d94-44e4-adb1-3b6765f62b3e",
+  "noise_score": 0.368078,
+  "noise_details": {
+    "snr_score": 0.519694,
+    "threshold": 0.5,
+    "zcr_score": 0.308531,
+    "bandwidth_score": 0.0,
+    "non_speech_ratio": 0.136931,
+    "event_evidence_score": 0.199166
+  },
+  "severity_details": {
+    "noise_ratio": 0.368078,
+    "snr_component": 0.173231,
+    "severity_score": 0.230538,
+    "noise_duration_ratio": 0.136931
+  },
+  "background_noise_type": "STATIC",
+  "classification_details": {
+    "backend": 1.0,
+    "clip_count": 1.0,
+    "raw::Music": 0.001134,
+    "raw::Speech": 0.391379,
+    "raw::Sidetone": 0.001248,
+    "raw::Dial tone": 0.531207,
+    "raw::Telephone": 0.017315,
+    "aggregated_score": 0.199166,
+    "raw::Beep, bleep": 0.000916,
+    "raw::Busy signal": 0.037838,
+    "raw::Sound effect": 0.00096,
+    "silence_region_mode": 0.0,
+    "raw::Inside, small room": 0.001642,
+    "raw::Telephone bell ringing": 0.002182
+  },
+  "background_noise_present": true,
+  "background_noise_severity": "LOW"
+}

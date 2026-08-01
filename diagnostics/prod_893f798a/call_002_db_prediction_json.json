@@ -1,0 +1,11 @@
+{
+  "confidence": 0.33,
+  "audio_quality": "CLEAR",
+  "emotional_tone": "NEUTRAL",
+  "emotional_intensity": "MEDIUM",
+  "long_silence_present": false,
+  "background_noise_type": "STATIC",
+  "speaker_overlap_present": false,
+  "background_noise_present": true,
+  "background_noise_severity": "LOW"
+}

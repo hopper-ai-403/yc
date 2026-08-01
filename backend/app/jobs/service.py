@@ -11,8 +11,9 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import UUID
 
+from app.audio.preprocessing.policy import is_preprocessing_stale
 from app.audio.repository import AudioBatchRepository, AudioRepository
-from app.config.settings import JobSettings
+from app.config.settings import JobSettings, get_settings
 from app.infrastructure.redis.job_progress import JobProgressCache
 from app.jobs.dispatcher import JobDispatcher
 from app.jobs.exceptions import (
@@ -108,8 +109,24 @@ class JobService:
         await self._jobs.save(job)
 
         assets = await self._assets.find_by_batch(job.batch_id)
+        preprocess_settings = get_settings().preprocessing
         for asset in assets:
             if is_audio_terminal_success(asset.processing_status):
+                # Re-enter pipeline when preprocessing policy / duration is stale
+                # so normalized audio and all downstream artifacts regenerate.
+                if not is_preprocessing_stale(
+                    asset.metadata_json, preprocess_settings
+                ) and asset.is_preprocessed:
+                    continue
+                previous_status = asset.processing_status
+                validate_audio_transition(previous_status, AudioStatus.QUEUED)
+                await self._assets.update_status(asset.id, AudioStatus.QUEUED)
+                logger.info(
+                    "audio_requeued_for_stale_preprocessing",
+                    job_id=str(job.id),
+                    audio_id=str(asset.id),
+                    previous_status=previous_status.value,
+                )
                 continue
             if asset.processing_status is AudioStatus.QUEUED:
                 continue

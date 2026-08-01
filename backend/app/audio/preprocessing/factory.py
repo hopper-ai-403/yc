@@ -40,4 +40,5 @@ def build_preprocessing_service(
     return PreprocessingService(
         assets=SqlAlchemyAudioRepository(session),
         pipeline=pipeline,
+        settings=preprocess_settings,
     )
