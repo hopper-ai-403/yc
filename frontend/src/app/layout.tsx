@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import type { ReactNode } from "react";
+import { Analytics } from "@vercel/analytics/react";
 
 import { AppShell } from "@/components/layout";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -67,6 +68,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <AppShell>{children}</AppShell>
           </ErrorBoundary>
         </AppProviders>
+        <Analytics />
       </body>
     </html>
   );
