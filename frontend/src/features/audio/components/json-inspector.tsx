@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 
 import { CopyButton } from "@/components/common/copy-button";
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/common/search-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -116,11 +116,18 @@ export function JsonInspector({
         ) : null
       }
     >
-      <div className="space-y-3">
+      <div className="flex flex-col gap-3">
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Filter keys…"
+          aria-label="Filter JSON keys"
+          className="w-full shrink-0"
+        />
         <div
           role="tablist"
           aria-label="JSON payload tabs"
-          className="flex flex-wrap gap-1"
+          className="flex flex-wrap gap-1 border-b border-border pb-2"
         >
           {INSPECTOR_TABS.map((item) => (
             <button
@@ -130,7 +137,7 @@ export function JsonInspector({
               aria-selected={tab === item}
               onClick={() => onTabChange(item)}
               className={cn(
-                "rounded-md px-2 py-1 text-xs capitalize transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "shrink-0 rounded-md px-2.5 py-1 text-xs capitalize transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 tab === item
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -140,13 +147,6 @@ export function JsonInspector({
             </button>
           ))}
         </div>
-        <Input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Filter keys…"
-          aria-label="Filter JSON keys"
-          className="h-8 text-xs"
-        />
         <SectionBody query={activeQuery} pendingLabel={`${tab} payload`}>
           {() => (
             <JsonViewer

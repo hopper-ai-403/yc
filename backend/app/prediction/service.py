@@ -106,9 +106,12 @@ class PredictionService:
         return [self._to_read(prediction) for prediction in predictions]
 
     def _to_read(self, prediction: Prediction) -> PredictionRead:
+        asset = prediction.audio_asset
+        filename = asset.filename if asset is not None else None
         return PredictionRead(
             audio_id=str(prediction.audio_asset_id),
             prediction_version=prediction.prediction_version,
+            filename=filename,
             prediction=self._public_payload(prediction),
         )
 

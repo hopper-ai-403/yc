@@ -22,7 +22,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="pl-8 pr-8"
+        className="h-8 bg-background pl-8 pr-8 text-xs"
         {...props}
       />
       {value ? (

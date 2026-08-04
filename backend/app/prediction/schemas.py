@@ -98,6 +98,7 @@ class PredictionRead(BaseModel):
 
     audio_id: str
     prediction_version: str | None = None
+    filename: str | None = None
     prediction: dict[str, Any]
 
 

@@ -8,7 +8,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import {
@@ -40,7 +40,36 @@ import {
 } from "@/services/batch";
 import { getBatchPredictions } from "@/services/prediction";
 import { useUiStore } from "@/stores/ui-store";
-import type { BatchExportJsonRead } from "@/types/domain";
+import type {
+  AssessmentPrediction,
+  BatchExportJsonRead,
+  PredictionRead,
+} from "@/types/domain";
+
+type ResultRow = {
+  key: string;
+  audioId: string | null;
+  filename: string;
+  result: AssessmentPrediction;
+};
+
+function rowsFromPredictions(predictions: PredictionRead[]): ResultRow[] {
+  return predictions.map((item) => ({
+    key: item.audio_id,
+    audioId: item.audio_id,
+    filename: item.filename?.trim() || item.audio_id,
+    result: item.prediction,
+  }));
+}
+
+function rowsFromExport(exportData: BatchExportJsonRead): ResultRow[] {
+  return exportData.results.map((row, index) => ({
+    key: `${row.filename}-${index}`,
+    audioId: null,
+    filename: row.filename,
+    result: row.result,
+  }));
+}
 
 export function BatchDetailView({ batchId }: { batchId: string }) {
   const openDrawer = useUiStore((s) => s.openDrawer);
@@ -57,30 +86,44 @@ export function BatchDetailView({ batchId }: { batchId: string }) {
     },
   });
 
+  const status = statusQuery.data;
+  const isActive =
+    status?.status === "RUNNING" || status?.status === "QUEUED";
+  const isCompleted = status?.status === "COMPLETED";
+
   const metricsQuery = useQuery({
     queryKey: metricsKeys.detail(batchId),
     queryFn: () => getBatchMetrics(batchId),
     retry: false,
-    enabled: statusQuery.data?.status === "COMPLETED",
-  });
-
-  const resultsQuery = useQuery<BatchExportJsonRead>({
-    queryKey: metricsKeys.list({ resource: "results", batchId }),
-    queryFn: () => getBatchExportJson(batchId),
-    retry: false,
-    enabled: statusQuery.data?.status === "COMPLETED",
+    enabled: isCompleted,
   });
 
   const predictionsQuery = useQuery({
     queryKey: ["predictions", "batch", batchId],
     queryFn: () => getBatchPredictions(batchId),
     retry: false,
-    enabled: statusQuery.data?.status === "COMPLETED",
+    enabled: Boolean(status),
+    refetchInterval: isActive ? JOB_PROGRESS_REFETCH_MS : false,
+  });
+
+  const resultsQuery = useQuery<BatchExportJsonRead>({
+    queryKey: metricsKeys.list({ resource: "results", batchId }),
+    queryFn: () => getBatchExportJson(batchId),
+    retry: false,
+    enabled: isCompleted,
   });
 
   const exports = useExportActions();
-  const status = statusQuery.data;
   const metrics = metricsQuery.data;
+
+  const resultRows = useMemo(() => {
+    const live = predictionsQuery.data?.predictions ?? [];
+    if (live.length > 0) return rowsFromPredictions(live);
+    if (resultsQuery.data && resultsQuery.data.count > 0) {
+      return rowsFromExport(resultsQuery.data);
+    }
+    return [];
+  }, [predictionsQuery.data, resultsQuery.data]);
 
   useEffect(() => {
     function onRefresh() {
@@ -116,8 +159,11 @@ export function BatchDetailView({ batchId }: { batchId: string }) {
                 label: "Refresh",
                 icon: RefreshCw,
                 shortcut: "R",
-                disabled: statusQuery.isFetching,
-                onClick: () => void statusQuery.refetch(),
+                disabled: statusQuery.isFetching || predictionsQuery.isFetching,
+                onClick: () => {
+                  void statusQuery.refetch();
+                  void predictionsQuery.refetch();
+                },
               },
               {
                 id: "benchmark",
@@ -215,17 +261,31 @@ export function BatchDetailView({ batchId }: { batchId: string }) {
           ) : null}
 
           <Card>
-            <CardHeader>
+            <CardHeader className="flex-row items-center justify-between space-y-0">
               <CardTitle>Results</CardTitle>
+              {resultRows.length > 0 ? (
+                <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                  {resultRows.length}
+                  {status.total_files > 0 ? ` / ${status.total_files}` : ""} ready
+                </span>
+              ) : null}
             </CardHeader>
             <CardContent className="p-0">
-              {resultsQuery.isLoading || predictionsQuery.isLoading ? (
+              {predictionsQuery.isLoading && resultRows.length === 0 ? (
                 <div className="space-y-2 p-4" aria-busy="true">
                   {Array.from({ length: 3 }, (_, index) => (
                     <Skeleton key={index} className="h-8 w-full" />
                   ))}
                 </div>
-              ) : resultsQuery.data && resultsQuery.data.count > 0 ? (
+              ) : predictionsQuery.isError && resultRows.length === 0 ? (
+                <div className="p-4">
+                  <ErrorState
+                    error={predictionsQuery.error}
+                    title="Failed to load results"
+                    onRetry={() => void predictionsQuery.refetch()}
+                  />
+                </div>
+              ) : resultRows.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -244,74 +304,69 @@ export function BatchDetailView({ batchId }: { batchId: string }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {resultsQuery.data.results.map((row, index) => {
-                        const prediction =
-                          predictionsQuery.data?.predictions[index];
-                        const audioId = prediction?.audio_id;
-                        return (
-                          <tr
-                            key={row.filename}
-                            className="border-b border-border/60 last:border-0 hover:bg-accent/30"
-                          >
-                            <td className="max-w-56 truncate px-4 py-2.5 font-mono text-xs">
-                              {row.filename}
-                            </td>
-                            <td className="px-4 py-2.5 text-xs">
-                              {row.result.emotional_tone}
-                            </td>
-                            <td className="px-4 py-2.5 text-xs text-muted-foreground">
-                              {row.result.emotional_intensity}
-                            </td>
-                            <td className="px-4 py-2.5 text-xs text-muted-foreground">
-                              {row.result.background_noise_present
-                                ? row.result.background_noise_type
-                                : "NONE"}
-                            </td>
-                            <td className="px-4 py-2.5 text-xs text-muted-foreground">
-                              {row.result.audio_quality}
-                            </td>
-                            <td className="px-4 py-2.5 text-right font-mono text-xs tabular-nums">
-                              {formatConfidence(row.result.confidence)}
-                            </td>
-                            <td className="px-4 py-2.5">
-                              <div className="flex items-center justify-end gap-1">
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  aria-label="Preview prediction"
-                                  onClick={() => {
-                                    if (audioId) {
-                                      openDrawer({
-                                        kind: "prediction",
-                                        id: audioId,
-                                        title: row.filename,
-                                      });
-                                    } else {
-                                      openDrawer({
-                                        kind: "artifact",
-                                        id: row.filename,
-                                        title: row.filename,
-                                        data: {
-                                          ...row.result,
-                                        } as unknown as Record<string, unknown>,
-                                      });
-                                    }
-                                  }}
-                                >
-                                  <Eye />
-                                </Button>
-                                {audioId ? (
-                                  <Link href={ROUTES.audioDetail(audioId)}>
-                                    <Button size="sm" variant="outline">
-                                      Open
-                                    </Button>
-                                  </Link>
-                                ) : null}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
+                      {resultRows.map((row) => (
+                        <tr
+                          key={row.key}
+                          className="border-b border-border/60 last:border-0 hover:bg-accent/30"
+                        >
+                          <td className="max-w-56 truncate px-4 py-2.5 font-mono text-xs">
+                            {row.filename}
+                          </td>
+                          <td className="px-4 py-2.5 text-xs">
+                            {row.result.emotional_tone}
+                          </td>
+                          <td className="px-4 py-2.5 text-xs text-muted-foreground">
+                            {row.result.emotional_intensity}
+                          </td>
+                          <td className="px-4 py-2.5 text-xs text-muted-foreground">
+                            {row.result.background_noise_present
+                              ? row.result.background_noise_type
+                              : "NONE"}
+                          </td>
+                          <td className="px-4 py-2.5 text-xs text-muted-foreground">
+                            {row.result.audio_quality}
+                          </td>
+                          <td className="px-4 py-2.5 text-right font-mono text-xs tabular-nums">
+                            {formatConfidence(row.result.confidence)}
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Preview prediction"
+                                onClick={() => {
+                                  if (row.audioId) {
+                                    openDrawer({
+                                      kind: "prediction",
+                                      id: row.audioId,
+                                      title: row.filename,
+                                    });
+                                  } else {
+                                    openDrawer({
+                                      kind: "artifact",
+                                      id: row.filename,
+                                      title: row.filename,
+                                      data: {
+                                        ...row.result,
+                                      } as unknown as Record<string, unknown>,
+                                    });
+                                  }
+                                }}
+                              >
+                                <Eye />
+                              </Button>
+                              {row.audioId ? (
+                                <Link href={ROUTES.audioDetail(row.audioId)}>
+                                  <Button size="sm" variant="outline">
+                                    Open
+                                  </Button>
+                                </Link>
+                              ) : null}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -320,11 +375,15 @@ export function BatchDetailView({ batchId }: { batchId: string }) {
                   <EmptyState
                     title="No results yet"
                     description={
-                      status.status === "RUNNING" || status.status === "QUEUED"
-                        ? "This batch is still processing. Results will appear automatically."
-                        : "Results appear once the batch finishes processing."
+                      isActive
+                        ? "Waiting for the first file to finish. Completed predictions appear here automatically."
+                        : "No predictions are available for this batch."
                     }
-                    hint="Polling stops when the job completes"
+                    hint={
+                      isActive
+                        ? "Live results update as each audio completes"
+                        : undefined
+                    }
                   />
                 </div>
               )}

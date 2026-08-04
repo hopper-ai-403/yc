@@ -226,6 +226,7 @@ export interface AssessmentPrediction {
 export interface PredictionRead {
   audio_id: string;
   prediction_version: string | null;
+  filename?: string | null;
   prediction: AssessmentPrediction;
 }
 
